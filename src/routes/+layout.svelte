@@ -1,15 +1,18 @@
 <script lang="ts">
   import '../app.css';
   import { page } from '$app/state';
+  import LangSwitch from '$lib/components/LangSwitch.svelte';
+  import { translator } from '$lib/i18n';
 
   let { data, children } = $props();
+  const t = $derived(translator(data.locale));
 
-  const tabs = [
-    { href: '/', label: '공시', icon: 'M4 5h16M4 10h16M4 15h10M4 20h7', match: (p: string) => p === '/' },
-    { href: '/search', label: '기업', icon: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-4.3-4.3', match: (p: string) => p.startsWith('/search') || p.startsWith('/corp') },
-    { href: '/account', label: '계정', icon: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z', match: (p: string) => p.startsWith('/account') }
-  ];
-  const adminTab = { href: '/admin', label: '관리', icon: 'M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4zM9 12l2 2 4-4', match: (p: string) => p.startsWith('/admin') };
+  const tabs = $derived([
+    { href: '/', label: t('common.nav.filings'), icon: 'M4 5h16M4 10h16M4 15h10M4 20h7', match: (p: string) => p === '/' },
+    { href: '/search', label: t('common.nav.companies'), icon: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-4.3-4.3', match: (p: string) => p.startsWith('/search') || p.startsWith('/corp') },
+    { href: '/account', label: t('common.nav.account'), icon: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z', match: (p: string) => p.startsWith('/account') }
+  ]);
+  const adminTab = $derived({ href: '/admin', label: t('common.nav.admin'), icon: 'M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4zM9 12l2 2 4-4', match: (p: string) => p.startsWith('/admin') });
   const shown = $derived(data.user?.role === 'admin' ? [...tabs, adminTab] : tabs);
   const bare = $derived(!data.user || /^\/(oauth|login|setup|register)(\/|$)/.test(page.url.pathname));
 </script>
@@ -17,7 +20,7 @@
 <div class="app" class:bare>
   {#if !bare}
     <header class="top">
-      <a class="brand" href="/" aria-label="MagicDART 홈">
+      <a class="brand" href="/" aria-label={t('common.home')}>
         <svg width="28" height="28" viewBox="0 0 64 64" aria-hidden="true">
           <circle cx="32" cy="32" r="30" fill="#FFC15E" />
           <circle cx="32" cy="32" r="20" fill="#F7934C" />
@@ -26,19 +29,22 @@
         </svg>
         <span>MagicDART</span>
       </a>
-      <nav class="side" aria-label="주 메뉴">
-        {#each shown as t}
-          <a href={t.href} aria-current={t.match(page.url.pathname) ? 'page' : undefined}>{t.label}</a>
-        {/each}
-      </nav>
+      <div class="right">
+        <nav class="side" aria-label={t('common.nav.main')}>
+          {#each shown as tab}
+            <a href={tab.href} aria-current={tab.match(page.url.pathname) ? 'page' : undefined}>{tab.label}</a>
+          {/each}
+        </nav>
+        <LangSwitch />
+      </div>
     </header>
 
     {#if !data.keyConfigured && !page.url.pathname.startsWith('/admin')}
       <div class="wrap">
         {#if data.user?.role === 'admin'}
-          <p class="banner">OpenDART API 키가 아직 없습니다. 저장된 데이터만 보여줍니다. <a href="/admin">관리에서 키 등록 →</a></p>
+          <p class="banner">{t('common.banner.noKeyAdmin')} <a href="/admin">{t('common.banner.noKeyAdminLink')}</a></p>
         {:else}
-          <p class="banner">OpenDART API 키가 아직 등록되지 않아 저장된 데이터만 보여줍니다. 관리자에게 문의하세요.</p>
+          <p class="banner">{t('common.banner.noKeyUser')}</p>
         {/if}
       </div>
     {/if}
@@ -48,14 +54,20 @@
     {@render children()}
   </main>
 
+  <footer class="wrap site-footer">
+    <p>{t('common.footer.madeBy')}</p>
+    {#each t('common.footer.notice').split('\n') as line}<p>{line}</p>{/each}
+    {#if t('common.footer.standards')}<p>{t('common.footer.standards')}</p>{/if}
+  </footer>
+
   {#if !bare}
-    <nav class="tabbar" aria-label="하단 메뉴" style:--tabs={shown.length}>
-      {#each shown as t}
-        <a href={t.href} aria-current={t.match(page.url.pathname) ? 'page' : undefined}>
+    <nav class="tabbar" aria-label={t('common.nav.bottom')} style:--tabs={shown.length}>
+      {#each shown as tab}
+        <a href={tab.href} aria-current={tab.match(page.url.pathname) ? 'page' : undefined}>
           <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"
-            ><path d={t.icon} fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg
+            ><path d={tab.icon} fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg
           >
-          <span>{t.label}</span>
+          <span>{tab.label}</span>
         </a>
       {/each}
     </nav>
@@ -74,6 +86,18 @@
     max-width: 960px;
     margin: 0 auto;
     padding: 0 16px;
+  }
+  .site-footer {
+    margin-top: 32px;
+    padding-top: 12px;
+    padding-bottom: 8px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .site-footer p {
+    margin: 0 0 4px;
   }
   .top {
     position: sticky;
@@ -98,6 +122,11 @@
   }
   .brand:hover {
     text-decoration: none;
+  }
+  .right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
   .side {
     display: none;

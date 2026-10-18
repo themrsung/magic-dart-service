@@ -1,7 +1,9 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
   import { invalidateAll } from '$app/navigation';
+  import { page } from '$app/state';
   import { ago, kstDateTime } from '$lib/format';
+  import { translator, type MessageKey } from '$lib/i18n';
   import { browserSupportsWebAuthn, passkeyRegister } from '$lib/passkey';
   import { onMount } from 'svelte';
 
@@ -13,43 +15,39 @@
   let issuedCodes = $state<string[] | null>(null);
   let copied = $state(false);
 
+  const t = $derived(translator(page.data.locale));
+  const locale = $derived(page.data.locale);
+
   onMount(() => (canPasskey = browserSupportsWebAuthn()));
 
   const codes = $derived(form?.recoveryCodes ?? issuedCodes);
   const msg = (section: string) => (form?.section === section ? form : null);
 
-  const eventLabel: Record<string, string> = {
-    setup: '처음 설정',
-    login: '로그인',
-    login_failed: '로그인 실패',
-    second_factor_failed: '2단계 인증 실패',
-    lockout: '잠금',
-    logout: '로그아웃',
-    password_changed: '비밀번호 변경',
-    totp_enabled: '인증 앱 등록',
-    totp_disabled: '인증 앱 해제',
-    recovery_codes_generated: '복구 코드 발급',
-    recovery_code_used: '복구 코드 사용',
-    passkey_added: '패스키 추가',
-    passkey_removed: '패스키 삭제',
-    session_revoked: '세션 종료',
-    user_registered: '가입',
-    oauth_client_approved: 'MCP 연결 승인',
-    oauth_client_revoked: 'MCP 연결 해제'
-  };
-  const methodLabel: Record<string, string> = {
-    password: '비밀번호',
-    'password+totp': '비밀번호 + 인증 앱',
-    'password+passkey': '비밀번호 + 패스키',
-    'password+recovery': '비밀번호 + 복구 코드',
-    passkey: '패스키',
-    setup: '처음 설정',
-    register: '가입',
-    'dev-bypass': '개발 모드 우회'
-  };
+  const EVENTS = [
+    'setup',
+    'login',
+    'login_failed',
+    'second_factor_failed',
+    'lockout',
+    'logout',
+    'password_changed',
+    'totp_enabled',
+    'totp_disabled',
+    'recovery_codes_generated',
+    'recovery_code_used',
+    'passkey_added',
+    'passkey_removed',
+    'session_revoked',
+    'user_registered',
+    'oauth_client_approved',
+    'oauth_client_revoked'
+  ];
+  const METHODS = ['password', 'password+totp', 'password+passkey', 'password+recovery', 'passkey', 'setup', 'register', 'dev-bypass'];
+  const eventLabel = (e: string) => (EVENTS.includes(e) ? t(`account.event.${e}` as MessageKey) : e);
+  const methodLabel = (m: string) => (METHODS.includes(m) ? t(`account.method.${m}` as MessageKey) : m);
 
   function device(ua: string | null): string {
-    if (!ua) return '알 수 없는 기기';
+    if (!ua) return t('account.device.unknown');
     const os = /iPhone|iPad/.test(ua) ? 'iOS' : /Android/.test(ua) ? 'Android' : /Mac OS X/.test(ua) ? 'macOS' : /Windows/.test(ua) ? 'Windows' : /Linux/.test(ua) ? 'Linux' : '';
     const br = /Edg\//.test(ua) ? 'Edge' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : '';
     return [br, os].filter(Boolean).join(' · ') || ua.slice(0, 40);
@@ -88,27 +86,27 @@
   }
 </script>
 
-<svelte:head><title>계정 · MagicDART</title></svelte:head>
+<svelte:head><title>{t('account.title')} · MagicDART</title></svelte:head>
 
 <div class="head">
-  <h1>계정</h1>
+  <h1>{t('account.title')}</h1>
   <form method="POST" action="/logout" onsubmit={clearOfflineCopies}>
-    <button class="btn ghost small">로그아웃</button>
+    <button class="btn ghost small">{t('account.logout')}</button>
   </form>
 </div>
-<p class="muted who">{data.username} · {data.role === 'admin' ? '관리자' : '사용자'}</p>
+<p class="muted who">{data.username} · {data.role === 'admin' ? t('account.role.admin') : t('account.role.user')}</p>
 
 {#if data.welcome}
-  <p class="banner info">계정을 만들었습니다. 아래에서 인증 앱이나 패스키를 등록해 2단계 인증을 켜 두세요.</p>
+  <p class="banner info">{t('account.welcome')}</p>
 {/if}
 {#if data.recovered}
-  <p class="banner">복구 코드로 로그인했습니다. 남은 복구 코드: {data.recoveryLeft}개. 필요하면 새로 발급하세요.</p>
+  <p class="banner">{t('account.recovered', { count: data.recoveryLeft })}</p>
 {/if}
 
 {#if codes}
   <section class="card codes" aria-live="polite">
-    <h2>복구 코드</h2>
-    <p class="small">인증 앱이나 패스키를 쓸 수 없을 때 한 번씩 사용할 수 있습니다. <strong>지금만 표시됩니다.</strong> 안전한 곳에 보관하세요.</p>
+    <h2>{t('account.codes.title')}</h2>
+    <p class="small">{t('account.codes.intro')} <strong>{t('account.codes.once')}</strong> {t('account.codes.keep')}</p>
     <ol>
       {#each codes as c}<li><code>{c}</code></li>{/each}
     </ol>
@@ -116,41 +114,41 @@
 {/if}
 
 <section class="card">
-  <h2>2단계 인증</h2>
+  <h2>{t('account.twoStep.title')}</h2>
 
-  <h3>인증 앱 (TOTP)</h3>
+  <h3>{t('account.totp.title')}</h3>
   {#if msg('totp')?.error}<p class="banner" role="alert">{msg('totp')?.error}</p>{/if}
   {#if msg('totp')?.message}<p class="banner info" role="status">{msg('totp')?.message}</p>{/if}
   {#if data.totp.enabled}
-    <p class="state"><span class="dot ok" aria-hidden="true"></span> 사용 중</p>
+    <p class="state"><span class="dot ok" aria-hidden="true"></span> {t('account.totp.on')}</p>
     <details>
-      <summary class="small">해제</summary>
+      <summary class="small">{t('account.totp.disable')}</summary>
       <form method="POST" action="?/totpDisable" class="row" use:enhance>
-        <input name="current" type="password" autocomplete="current-password" placeholder="현재 비밀번호" required aria-label="현재 비밀번호" />
-        <button class="btn ghost">해제</button>
+        <input name="current" type="password" autocomplete="current-password" placeholder={t('account.current.placeholder')} required aria-label={t('account.current.placeholder')} />
+        <button class="btn ghost">{t('account.totp.disable')}</button>
       </form>
     </details>
   {:else if data.totp.pending}
-    <p class="small">Google Authenticator, 1Password 같은 인증 앱으로 QR 코드를 스캔하고, 앱에 표시된 6자리 코드를 입력하세요.</p>
+    <p class="small">{t('account.totp.scan')}</p>
     <div class="enroll">
-      <img src={data.totp.pending.qr} alt="TOTP 등록 QR 코드" width="180" height="180" />
+      <img src={data.totp.pending.qr} alt={t('account.totp.qrAlt')} width="180" height="180" />
       <div>
-        <p class="small muted">스캔할 수 없으면 직접 입력:</p>
+        <p class="small muted">{t('account.totp.manual')}</p>
         <code class="secret">{data.totp.pending.secret}</code>
       </div>
     </div>
     <form method="POST" action="?/totpConfirm" class="row" use:enhance>
-      <input name="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="6자리 코드" required aria-label="인증 코드" />
-      <button class="btn">확인</button>
+      <input name="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder={t('account.totp.codePlaceholder')} required aria-label={t('account.totp.codeLabel')} />
+      <button class="btn">{t('account.totp.confirm')}</button>
     </form>
-    <form method="POST" action="?/totpCancel" use:enhance><button class="btn ghost small cancel">취소</button></form>
+    <form method="POST" action="?/totpCancel" use:enhance><button class="btn ghost small cancel">{t('account.totp.cancel')}</button></form>
   {:else}
-    <p class="state"><span class="dot" aria-hidden="true"></span> 사용 안 함</p>
-    <form method="POST" action="?/totpBegin" use:enhance><button class="btn ghost">인증 앱 등록</button></form>
+    <p class="state"><span class="dot" aria-hidden="true"></span> {t('account.totp.off')}</p>
+    <form method="POST" action="?/totpBegin" use:enhance><button class="btn ghost">{t('account.totp.enroll')}</button></form>
   {/if}
 
-  <h3>패스키</h3>
-  <p class="small muted">기기의 지문·얼굴 인식이나 보안 키로 로그인합니다. 패스키만으로도 로그인할 수 있습니다.</p>
+  <h3>{t('account.passkeys.title')}</h3>
+  <p class="small muted">{t('account.passkeys.intro')}</p>
   {#if msg('passkeys')?.error}<p class="banner" role="alert">{msg('passkeys')?.error}</p>{/if}
   {#if msg('passkeys')?.message}<p class="banner info" role="status">{msg('passkeys')?.message}</p>{/if}
   {#if passkeyError}<p class="banner" role="alert">{passkeyError}</p>{/if}
@@ -159,98 +157,96 @@
       <li>
         <div class="main">
           <strong>{p.name}</strong>
-          <span class="muted small">등록 {kstDateTime(p.created_at)} · 마지막 사용 {ago(p.last_used_at)}{p.backed_up ? ' · 동기화됨' : ''}</span>
+          <span class="muted small">{t('account.passkeys.meta', { created: kstDateTime(p.created_at, locale), used: ago(p.last_used_at, locale) })}{p.backed_up ? t('account.passkeys.synced') : ''}</span>
         </div>
         <details>
-          <summary class="small">관리</summary>
+          <summary class="small">{t('account.passkeys.manage')}</summary>
           <form method="POST" action="?/passkeyRename" class="row" use:enhance>
             <input type="hidden" name="id" value={p.id} />
-            <input name="name" type="text" maxlength="60" value={p.name} aria-label="패스키 이름" required />
-            <button class="btn ghost small">이름 변경</button>
+            <input name="name" type="text" maxlength="60" value={p.name} aria-label={t('account.passkeys.nameLabel')} required />
+            <button class="btn ghost small">{t('account.passkeys.rename')}</button>
           </form>
           <form method="POST" action="?/passkeyRemove" class="row" use:enhance>
             <input type="hidden" name="id" value={p.id} />
-            <input name="current" type="password" autocomplete="current-password" placeholder="현재 비밀번호" required aria-label="현재 비밀번호" />
-            <button class="btn ghost small">삭제</button>
+            <input name="current" type="password" autocomplete="current-password" placeholder={t('account.current.placeholder')} required aria-label={t('account.current.placeholder')} />
+            <button class="btn ghost small">{t('account.passkeys.remove')}</button>
           </form>
         </details>
       </li>
     {:else}
-      <li class="muted small">등록된 패스키가 없습니다.</li>
+      <li class="muted small">{t('account.passkeys.none')}</li>
     {/each}
   </ul>
   {#if canPasskey}
     <div class="row">
-      <input type="text" bind:value={passkeyName} maxlength="60" placeholder="이름 (예: 노트북)" aria-label="새 패스키 이름" />
-      <button class="btn ghost" type="button" onclick={addPasskey} disabled={passkeyBusy}>{passkeyBusy ? '등록 중…' : '패스키 추가'}</button>
+      <input type="text" bind:value={passkeyName} maxlength="60" placeholder={t('account.passkeys.newPlaceholder')} aria-label={t('account.passkeys.newLabel')} />
+      <button class="btn ghost" type="button" onclick={addPasskey} disabled={passkeyBusy}>{passkeyBusy ? t('account.passkeys.adding') : t('account.passkeys.add')}</button>
     </div>
   {:else}
-    <p class="small muted">이 브라우저는 패스키를 지원하지 않습니다.</p>
+    <p class="small muted">{t('account.passkeys.unsupported')}</p>
   {/if}
 
-  <h3>복구 코드</h3>
+  <h3>{t('account.recovery.title')}</h3>
   {#if msg('recovery')?.error}<p class="banner" role="alert">{msg('recovery')?.error}</p>{/if}
   {#if data.totp.enabled || data.passkeys.length}
-    <p class="small">남은 코드 {data.recoveryLeft}개</p>
+    <p class="small">{t('account.recovery.left', { count: data.recoveryLeft })}</p>
     <details>
-      <summary class="small">새로 발급 (기존 코드는 무효)</summary>
+      <summary class="small">{t('account.recovery.regenerate')}</summary>
       <form method="POST" action="?/recovery" class="row" use:enhance>
-        <input name="current" type="password" autocomplete="current-password" placeholder="현재 비밀번호" required aria-label="현재 비밀번호" />
-        <button class="btn ghost">발급</button>
+        <input name="current" type="password" autocomplete="current-password" placeholder={t('account.current.placeholder')} required aria-label={t('account.current.placeholder')} />
+        <button class="btn ghost">{t('account.recovery.issue')}</button>
       </form>
     </details>
   {:else}
-    <p class="small muted">인증 앱이나 패스키를 등록하면 함께 발급됩니다.</p>
+    <p class="small muted">{t('account.recovery.withFactor')}</p>
   {/if}
 </section>
 
 <section class="card">
-  <h2>비밀번호</h2>
+  <h2>{t('account.password.title')}</h2>
   {#if msg('password')?.error}<p class="banner" role="alert">{msg('password')?.error}</p>{/if}
   {#if msg('password')?.message}<p class="banner info" role="status">{msg('password')?.message}</p>{/if}
   <form method="POST" action="?/password" class="stack" use:enhance={() => async ({ update }) => update({ reset: true })}>
     <input type="text" name="username" autocomplete="username" value={data.username} hidden readonly />
-    <input name="current" type="password" autocomplete="current-password" placeholder="현재 비밀번호" required aria-label="현재 비밀번호" />
-    <input name="password" type="password" autocomplete="new-password" placeholder="새 비밀번호 ({data.minPassword}자 이상)" required minlength={data.minPassword} aria-label="새 비밀번호" />
-    <input name="confirm" type="password" autocomplete="new-password" placeholder="새 비밀번호 확인" required minlength={data.minPassword} aria-label="새 비밀번호 확인" />
-    <button class="btn ghost">비밀번호 변경</button>
+    <input name="current" type="password" autocomplete="current-password" placeholder={t('account.current.placeholder')} required aria-label={t('account.current.placeholder')} />
+    <input name="password" type="password" autocomplete="new-password" placeholder={t('account.password.newPlaceholder', { min: data.minPassword })} required minlength={data.minPassword} aria-label={t('account.password.newLabel')} />
+    <input name="confirm" type="password" autocomplete="new-password" placeholder={t('account.password.confirmPlaceholder')} required minlength={data.minPassword} aria-label={t('account.password.confirmPlaceholder')} />
+    <button class="btn ghost">{t('account.password.submit')}</button>
   </form>
-  <p class="small muted">바꾸면 다른 기기의 세션은 모두 로그아웃됩니다.</p>
+  <p class="small muted">{t('account.password.note')}</p>
 </section>
 
 <section class="card">
-  <h2>로그인된 기기</h2>
+  <h2>{t('account.sessions.title')}</h2>
   {#if msg('sessions')?.error}<p class="banner" role="alert">{msg('sessions')?.error}</p>{/if}
   {#if msg('sessions')?.message}<p class="banner info" role="status">{msg('sessions')?.message}</p>{/if}
   <ul class="list">
     {#each data.sessions as s (s.id)}
       <li>
         <div class="main">
-          <strong>{device(s.user_agent)}{#if s.current} <span class="chip">이 기기</span>{/if}</strong>
-          <span class="muted small">{methodLabel[s.method] ?? s.method} · {kstDateTime(s.created_at)} 로그인 · 최근 {ago(s.last_seen_at)}{s.ip ? ` · ${s.ip}` : ''}</span>
+          <strong>{device(s.user_agent)}{#if s.current} <span class="chip">{t('account.sessions.thisDevice')}</span>{/if}</strong>
+          <span class="muted small">{t('account.sessions.meta', { method: methodLabel(s.method), created: kstDateTime(s.created_at, locale), seen: ago(s.last_seen_at, locale) })}{s.ip ? ` · ${s.ip}` : ''}</span>
         </div>
         {#if !s.current}
           <form method="POST" action="?/sessionRevoke" use:enhance>
             <input type="hidden" name="id" value={s.id} />
-            <button class="btn ghost small">끝내기</button>
+            <button class="btn ghost small">{t('account.sessions.end')}</button>
           </form>
         {/if}
       </li>
     {/each}
   </ul>
   {#if data.sessions.length > 1}
-    <form method="POST" action="?/sessionRevokeOthers" use:enhance><button class="btn ghost small">다른 기기 모두 로그아웃</button></form>
+    <form method="POST" action="?/sessionRevokeOthers" use:enhance><button class="btn ghost small">{t('account.sessions.endOthers')}</button></form>
   {/if}
 </section>
 
 <section class="card">
-  <h2>MCP 연결</h2>
-  <p class="muted small">
-    Claude 같은 MCP 클라이언트에 아래 주소를 추가하면 브라우저에 승인 화면이 열립니다. 승인한 클라이언트는 이 계정으로 연결되며, 여기서 언제든 해제할 수 있습니다.
-  </p>
+  <h2>{t('account.mcp.title')}</h2>
+  <p class="muted small">{t('account.mcp.intro')}</p>
   <div class="mcp-url">
     <code>{data.mcpUrl}</code>
-    <button class="btn ghost small" onclick={copyMcp}>{copied ? '복사됨' : 'Claude Code 명령 복사'}</button>
+    <button class="btn ghost small" onclick={copyMcp}>{copied ? t('account.mcp.copied') : t('account.mcp.copy')}</button>
   </div>
   {#if msg('clients')?.error}<p class="banner" role="alert">{msg('clients')?.error}</p>{/if}
   {#if msg('clients')?.message}<p class="banner info" role="status">{msg('clients')?.message}</p>{/if}
@@ -260,35 +256,35 @@
         <div class="main">
           <strong>{c.client_name}</strong>
           <span class="muted small">
-            {#if c.revoked_at}해제됨 · {kstDateTime(c.revoked_at)}{:else}승인 {kstDateTime(c.approved_at)} · 마지막 사용 {ago(c.last_used_at)}{/if}
+            {#if c.revoked_at}{t('account.mcp.revokedAt', { at: kstDateTime(c.revoked_at, locale) })}{:else}{t('account.mcp.approvedAt', { at: kstDateTime(c.approved_at, locale), used: ago(c.last_used_at, locale) })}{/if}
           </span>
           <span class="muted small uri">{c.redirect_uris[0]}</span>
         </div>
         {#if !c.revoked_at}
           <form method="POST" action="?/clientRevoke" use:enhance>
             <input type="hidden" name="client_id" value={c.client_id} />
-            <button class="btn ghost small">연결 해제</button>
+            <button class="btn ghost small">{t('account.mcp.disconnect')}</button>
           </form>
         {/if}
       </li>
     {:else}
-      <li class="muted small">연결된 클라이언트가 없습니다.</li>
+      <li class="muted small">{t('account.mcp.none')}</li>
     {/each}
   </ul>
 </section>
 
 <section class="card">
-  <h2>최근 보안 활동</h2>
+  <h2>{t('account.activity.title')}</h2>
   <ul class="list">
     {#each data.activity as a (a.id)}
       <li>
         <div class="main">
-          <strong>{eventLabel[a.event] ?? a.event}</strong>
-          <span class="muted small">{kstDateTime(a.at)}{a.ip ? ` · ${a.ip}` : ''}{a.detail ? ` · ${a.detail}` : ''}</span>
+          <strong>{eventLabel(a.event)}</strong>
+          <span class="muted small">{kstDateTime(a.at, locale)}{a.ip ? ` · ${a.ip}` : ''}{a.detail ? ` · ${a.detail}` : ''}</span>
         </div>
       </li>
     {:else}
-      <li class="muted small">기록이 없습니다.</li>
+      <li class="muted small">{t('account.activity.none')}</li>
     {/each}
   </ul>
 </section>

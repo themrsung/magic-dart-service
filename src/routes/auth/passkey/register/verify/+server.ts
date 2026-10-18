@@ -1,3 +1,4 @@
+import { ts } from '$lib/server/i18n';
 import { json } from '@sveltejs/kit';
 import type { RegistrationResponseJSON } from '@simplewebauthn/server';
 import { audit } from '$lib/server/auth/audit';
@@ -9,12 +10,12 @@ import { rotateCurrentSession } from '$lib/server/auth/sessions';
 export const POST = async (event) => {
   const user = requireUser(event);
   const body = (await event.request.json().catch(() => null)) as { name?: string; response?: RegistrationResponseJSON } | null;
-  if (!body?.response) return json({ message: '잘못된 요청입니다' }, { status: 400 });
+  if (!body?.response) return json({ message: ts('auth.passkey.badRequest') }, { status: 400 });
   let passkey;
   try {
     passkey = await finishRegistration(user.id, String(body.name ?? ''), body.response, event.url.origin);
   } catch {
-    return json({ message: '패스키를 등록하지 못했습니다. 다시 시도하세요.' }, { status: 400 });
+    return json({ message: ts('auth.passkey.registerFailed') }, { status: 400 });
   }
   const m = meta(event);
   audit({ event: 'passkey_added', userId: user.id, username: user.username, ip: m.ip, detail: passkey.name });

@@ -1,10 +1,19 @@
 <script lang="ts">
+  import { page } from '$app/state';
+  import LangSwitch from '$lib/components/LangSwitch.svelte';
   import { kstDateTime } from '$lib/format';
+  import { translator, type MessageKey } from '$lib/i18n';
 
   let { data } = $props();
+  const t = $derived(translator(page.data.locale));
+  const MARK = '\u0000';
+  /** Splits a message around its one placeholder so the value can be wrapped in <strong>. */
+  const around = (key: MessageKey, param: string) => t(key, { [param]: MARK }).split(MARK);
+  const lead = $derived(around('auth.consent.lead', 'client'));
+  const bind = $derived(around('auth.consent.bindNote', 'username'));
 </script>
 
-<svelte:head><title>MCP 연결 승인 · MagicDART</title></svelte:head>
+<svelte:head><title>{t('auth.consent.pageTitle')} · MagicDART</title></svelte:head>
 
 <div class="consent card">
   <svg width="48" height="48" viewBox="0 0 64 64" aria-hidden="true">
@@ -13,30 +22,31 @@
     <circle cx="32" cy="32" r="10" fill="#CC5803" />
     <circle cx="32" cy="32" r="3.5" fill="#1F1300" />
   </svg>
-  <h1>MCP 연결 요청</h1>
-  <p class="lead"><strong>{data.clientName}</strong>이(가) MagicDART 데이터에 접근하려고 합니다.</p>
+  <h1>{t('auth.consent.title')}</h1>
+  <p class="lead">{lead[0]}<strong>{data.clientName}</strong>{lead[1]}</p>
 
   <ul class="scope">
-    <li>기업개황·공시 목록·재무·지분·주요사항 조회 (읽기 전용)</li>
-    <li>캐시에 없는 데이터는 OpenDART에서 가져오며, 오늘 요청 한도를 사용합니다</li>
-    <li>API 키는 공유되지 않습니다</li>
+    <li>{t('auth.consent.scopeRead')}</li>
+    <li>{t('auth.consent.scopeQuota')}</li>
+    <li>{t('auth.consent.scopeKey')}</li>
   </ul>
 
   <dl class="details">
-    <dt>돌아갈 주소</dt>
+    <dt>{t('auth.consent.redirect')}</dt>
     <dd><code>{data.redirectUri}</code></dd>
-    <dt>클라이언트 등록</dt>
-    <dd>{kstDateTime(data.registeredAt)}{data.previouslyApproved ? ' · 이전에 승인한 적 있음' : ''}</dd>
+    <dt>{t('auth.consent.registered')}</dt>
+    <dd>{kstDateTime(data.registeredAt, page.data.locale)}{data.previouslyApproved ? t('auth.consent.previouslyApproved') : ''}</dd>
   </dl>
   {#if data.loopback}
-    <p class="muted small">이 기기에서 실행 중인 프로그램(예: 터미널의 Claude Code)으로 돌아갑니다.</p>
+    <p class="muted small">{t('auth.consent.loopback')}</p>
   {/if}
-  <p class="muted small">승인하면 이 클라이언트는 <strong>{data.username}</strong> 계정으로 연결됩니다. 직접 연결을 시작하지 않았다면 거부하세요.</p>
+  <p class="muted small">{bind[0]}<strong>{data.username}</strong>{bind[1]}</p>
 
   <form method="POST" class="actions">
-    <button class="btn ghost" name="decision" value="deny">거부</button>
-    <button class="btn" name="decision" value="approve">승인</button>
+    <button class="btn ghost" name="decision" value="deny">{t('auth.consent.deny')}</button>
+    <button class="btn" name="decision" value="approve">{t('auth.consent.approve')}</button>
   </form>
+  <div class="lang-row"><LangSwitch /></div>
 </div>
 
 <style>
@@ -79,6 +89,11 @@
   .small {
     font-size: 13px;
     margin: 4px 0;
+  }
+  .lang-row {
+    display: flex;
+    justify-content: center;
+    margin-top: 16px;
   }
   .actions {
     display: grid;

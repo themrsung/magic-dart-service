@@ -1,3 +1,4 @@
+import { ts } from '../i18n';
 import { hash, verify } from '@node-rs/argon2';
 
 export const MIN_PASSWORD = 10;
@@ -29,12 +30,12 @@ const COMMON = new Set(
 
 /** NIST SP 800-63B style: length and a breach list, no composition rules. Returns an error message or null. */
 export function passwordProblem(password: string, username = ''): string | null {
-  if (password.length < MIN_PASSWORD) return `비밀번호는 ${MIN_PASSWORD}자 이상이어야 합니다.`;
-  if (password.length > MAX_PASSWORD) return `비밀번호는 ${MAX_PASSWORD}자 이하여야 합니다.`;
+  if (password.length < MIN_PASSWORD) return ts('auth.error.passwordShort', { min: MIN_PASSWORD });
+  if (password.length > MAX_PASSWORD) return ts('auth.error.passwordLong', { max: MAX_PASSWORD });
   const lower = password.toLowerCase();
-  if (COMMON.has(lower)) return '너무 흔한 비밀번호입니다. 다른 비밀번호를 사용하세요.';
-  if (/^(.)\1+$/.test(password)) return '같은 문자만 반복한 비밀번호는 사용할 수 없습니다.';
-  if (username && lower.includes(username.toLowerCase())) return '비밀번호에 아이디를 넣을 수 없습니다.';
+  if (COMMON.has(lower)) return ts('auth.error.passwordCommon');
+  if (/^(.)\1+$/.test(password)) return ts('auth.error.passwordRepeat');
+  if (username && lower.includes(username.toLowerCase())) return ts('auth.error.passwordUsername');
   return null;
 }
 

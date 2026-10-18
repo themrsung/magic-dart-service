@@ -3,6 +3,7 @@ import type { ReportCode } from 'magic-dart';
 import * as cache from '$lib/server/cache';
 import { endpointTitle, EVENT_THEMES, themeOf } from '$lib/server/catalog';
 import { getCorp, getFinancials } from '$lib/server/store';
+import { ts } from '$lib/server/i18n';
 import { kstDate } from '$lib/server/time';
 
 const TABS = ['overview', 'filings', 'financials', 'ownership', 'events'] as const;
@@ -16,13 +17,13 @@ function defaultAnnualYear(today: string): number {
 
 export const load = async ({ params, url }) => {
   const code = params.code;
-  if (!/^\d{8}$/.test(code)) error(404, '잘못된 기업 코드입니다');
+  if (!/^\d{8}$/.test(code)) error(404, ts('corp.err.badCode'));
   const corp = getCorp(code);
   const tab: Tab = (TABS as readonly string[]).includes(url.searchParams.get('tab') ?? '') ? (url.searchParams.get('tab') as Tab) : 'overview';
   const today = kstDate();
 
   const company = await cache.company(code, 'ui');
-  if (!corp && !company.data) error(404, '기업을 찾을 수 없습니다');
+  if (!corp && !company.data) error(404, ts('corp.err.notFound'));
 
   const base = {
     code,
@@ -47,7 +48,7 @@ export const load = async ({ params, url }) => {
   if (tab === 'financials') {
     const year = Number(url.searchParams.get('year')) || defaultAnnualYear(today);
     const reprt = (REPORT_CODES.includes(url.searchParams.get('reprt') ?? '') ? url.searchParams.get('reprt') : '11011') as ReportCode;
-    if (year < 2015) error(400, '2015년 이전 재무 데이터는 OpenDART에서 제공하지 않습니다');
+    if (year < 2015) error(400, ts('corp.err.before2015'));
     const fin = await cache.financials(code, year, reprt, 'ui');
     const available = getFinancials(code).map((p) => ({ year: p.bsns_year, reprt: p.reprt_code }));
     return { ...base, tab: 'financials' as const, year, reprt, fin: fin.data, finAt: fin.fetchedAt, finError: fin.error ?? null, available, maxYear: +today.slice(0, 4) };
@@ -89,7 +90,7 @@ export const actions = {
     if (what === 'events') {
       const r = await cache.events(code, 'ui', true);
       if (r.error) return fail(502, { message: r.error.message });
-      return { message: r.failed?.length ? `${36 - r.failed.length}개 유형 조회 · ${r.failed.length}개 실패` : '36개 유형 모두 조회했습니다' };
+      return { message: r.failed?.length ? ts('corp.msg.eventsPartial', { ok: 36 - r.failed.length, failed: r.failed.length }) : ts('corp.msg.eventsAll') };
     }
     if (what === 'company') {
       const r = await cache.company(code, 'ui', true);
@@ -105,10 +106,10 @@ export const actions = {
     } else if (what === 'financials') {
       const year = Number(form.get('year'));
       const reprt = String(form.get('reprt')) as ReportCode;
-      if (!REPORT_CODES.includes(reprt) || year < 2015) return fail(400, { message: '잘못된 기간입니다' });
+      if (!REPORT_CODES.includes(reprt) || year < 2015) return fail(400, { message: ts('corp.err.badPeriod') });
       const r = await cache.financials(code, year, reprt, 'ui', true);
       if (r.error) return fail(502, { message: r.error.message });
     }
-    return { message: '새로 고쳤습니다' };
+    return { message: ts('corp.msg.refreshed') };
   }
 };

@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import LangSwitch from './LangSwitch.svelte';
 
   let { title, lead, children }: { title: string; lead?: string; children: Snippet } = $props();
 </script>
@@ -14,9 +15,18 @@
   <h1>{title}</h1>
   {#if lead}<p class="lead muted">{lead}</p>{/if}
   {@render children()}
+  <div class="lang-row"><LangSwitch /></div>
 </div>
 
 <style>
+  .lang-row {
+    display: flex;
+    justify-content: center;
+    margin-top: 18px;
+  }
+  .lang-row :global(.btn) {
+    width: auto;
+  }
   .auth {
     max-width: 420px;
     margin: 8vh auto 0;

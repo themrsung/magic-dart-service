@@ -1,11 +1,14 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
   import { goto } from '$app/navigation';
+  import { page } from '$app/state';
   import AuthCard from '$lib/components/AuthCard.svelte';
+  import { translator } from '$lib/i18n';
   import { browserSupportsWebAuthn, passkeyLogin } from '$lib/passkey';
   import { onMount } from 'svelte';
 
   let { data, form } = $props();
+  const t = $derived(translator(page.data.locale));
   let busy = $state(false);
   let passkeyError = $state('');
   let canPasskey = $state(false);
@@ -16,7 +19,7 @@
     passkeyError = '';
     busy = true;
     try {
-      const to = await passkeyLogin(false, data.next);
+      const to = await passkeyLogin(false, data.next, t);
       if (to) await goto(to, { invalidateAll: true });
     } catch (err) {
       passkeyError = err instanceof Error ? err.message : String(err);
@@ -26,11 +29,11 @@
   }
 </script>
 
-<svelte:head><title>로그인 · MagicDART</title></svelte:head>
+<svelte:head><title>{t('auth.login.title')} · MagicDART</title></svelte:head>
 
-<AuthCard title="로그인">
+<AuthCard title={t('auth.login.title')}>
   {#if data.devBypass}
-    <p class="banner info" role="note"><strong>개발 모드</strong> · 모의 OpenDART API에 연결되어 있어 아무 아이디·비밀번호로 관리자 로그인됩니다.</p>
+    <p class="banner info" role="note"><strong>{t('auth.login.devBypassLabel')}</strong> · {t('auth.login.devBypass')}</p>
   {/if}
   {#if form?.error}<p class="banner" role="alert">{form.error}</p>{/if}
   {#if passkeyError}<p class="banner" role="alert">{passkeyError}</p>{/if}
@@ -47,20 +50,20 @@
     }}
   >
     <input type="hidden" name="next" value={data.next} />
-    <label for="username">아이디</label>
+    <label for="username">{t('auth.field.username')}</label>
     <input id="username" name="username" type="text" autocomplete="username webauthn" autocapitalize="off" spellcheck="false" required value={form?.username ?? ''} />
-    <label for="password">비밀번호</label>
+    <label for="password">{t('auth.field.password')}</label>
     <input id="password" name="password" type="password" autocomplete="current-password" required />
-    <button class="btn" disabled={busy}>로그인</button>
+    <button class="btn" disabled={busy}>{t('auth.login.submit')}</button>
   </form>
 
   {#if canPasskey}
-    <p class="or">또는</p>
-    <button class="btn ghost" type="button" onclick={withPasskey} disabled={busy}>패스키로 로그인</button>
+    <p class="or">{t('auth.or')}</p>
+    <button class="btn ghost" type="button" onclick={withPasskey} disabled={busy}>{t('auth.login.passkey')}</button>
   {/if}
 
   {#if data.openRegistration}
-    <p class="muted small center">계정이 없나요? <a href="/register">가입하기</a></p>
+    <p class="muted small center">{t('auth.login.noAccount')} <a href="/register">{t('auth.login.registerLink')}</a></p>
   {/if}
 </AuthCard>
 

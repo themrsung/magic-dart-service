@@ -12,6 +12,7 @@ const PUBLIC_EXACT = new Set([
   '/service-worker.js',
   '/favicon.ico',
   '/robots.txt',
+  '/lang',
   '/auth/passkey/login/options',
   '/auth/passkey/login/verify',
   // MCP and OAuth machine endpoints authenticate with bearer tokens / PKCE instead.

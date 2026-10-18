@@ -4,19 +4,23 @@
   import FilingList from '$lib/components/FilingList.svelte';
   import Freshness from '$lib/components/Freshness.svelte';
   import { date, krwShort, MARKET, num, REPORTS } from '$lib/format';
+  import { translator } from '$lib/i18n';
+  import { accountName, eventTitle, marketLabel, periodName, personTerm, reportCodeLabel, statementName, themeLabel } from '$lib/i18n/dart-terms';
   import { viewerUrl } from '$lib/normalize';
 
   let { data, form } = $props();
+  const locale = $derived(data.locale);
+  const t = $derived(translator(locale));
 
   type Row = Record<string, string | undefined>;
 
-  const tabs = [
-    { id: 'overview', label: '개요' },
-    { id: 'filings', label: '공시' },
-    { id: 'financials', label: '재무' },
-    { id: 'ownership', label: '지분' },
-    { id: 'events', label: '주요사항' }
-  ];
+  const tabs = $derived([
+    { id: 'overview', label: t('corp.tab.overview') },
+    { id: 'filings', label: t('corp.tab.filings') },
+    { id: 'financials', label: t('corp.tab.financials') },
+    { id: 'ownership', label: t('corp.tab.ownership') },
+    { id: 'events', label: t('corp.tab.events') }
+  ]);
 
   const name = $derived(data.company?.corp_name ?? data.corp?.corp_name ?? data.code);
   const cls = $derived(data.company?.corp_cls ?? data.corp?.corp_cls ?? null);
@@ -45,20 +49,23 @@
       }, {})
     )
   );
-  const reprtLabel = (c: string) => REPORTS.find((r) => r.code === c)?.label ?? c;
+  const reprtLabel = (c: string) => reportCodeLabel(c, locale);
+  const basisLabel = (b: string) => (b === 'CFS' ? t('corp.fin.consolidated') : t('corp.fin.separate'));
+  const monthName = (m: number) => new Intl.DateTimeFormat('en-US', { month: 'long', timeZone: 'UTC' }).format(Date.UTC(2000, m - 1, 1));
+  const krw = (raw: string | undefined, unit = '원') => krwShort(raw, unit, locale);
 
   function headlineOf(rows: Row[] | undefined) {
     if (!rows?.length) return [];
     const basis = rows.some((r) => r.fs_div === 'CFS') ? 'CFS' : 'OFS';
     const pick = (...names: string[]) => rows.find((r) => r.fs_div === basis && names.some((n) => r.account_nm?.replace(/\s/g, '').startsWith(n)));
     return [
-      { label: '매출액', row: pick('매출액', '수익(매출액)', '영업수익') },
-      { label: '영업이익', row: pick('영업이익') },
-      { label: '당기순이익', row: pick('당기순이익') },
-      { label: '자산총계', row: pick('자산총계') }
+      { label: accountName('매출액', locale), row: pick('매출액', '수익(매출액)', '영업수익') },
+      { label: accountName('영업이익', locale), row: pick('영업이익') },
+      { label: accountName('당기순이익', locale), row: pick('당기순이익') },
+      { label: accountName('자산총계', locale), row: pick('자산총계') }
     ]
       .filter((k) => k.row)
-      .map((k) => ({ ...k, basis: basis === 'CFS' ? '연결' : '별도' }));
+      .map((k) => ({ ...k, basis: basisLabel(basis) }));
   }
 
   // ── events ──
@@ -66,15 +73,15 @@
   const shownEvents = $derived(data.tab === 'events' ? data.events.filter((e) => !theme || e.theme === theme) : []);
   const eventSummary = (row: Row) =>
     [
-      row.nstk_ostk_cnt && `신주(보통) ${num(row.nstk_ostk_cnt)}주`,
-      row.aqpln_stk_ostk && `취득예정 ${num(row.aqpln_stk_ostk)}주`,
-      row.dppln_stk_ostk && `처분예정 ${num(row.dppln_stk_ostk)}주`,
-      row.bd_fta && `사채 ${krwShort(row.bd_fta)?.text ?? row.bd_fta}`,
-      row.fdpp_fclt && `시설자금 ${krwShort(row.fdpp_fclt)?.text}`,
-      row.fdpp_op && `운영자금 ${krwShort(row.fdpp_op)?.text}`,
-      row.mg_mth && `합병방법 ${row.mg_mth}`,
-      row.dv_mth && `분할방법 ${row.dv_mth}`,
-      row.icnm && `사건 ${row.icnm}`
+      row.nstk_ostk_cnt && t('corp.ev.newShares', { count: num(row.nstk_ostk_cnt, locale) }),
+      row.aqpln_stk_ostk && t('corp.ev.planAcquire', { count: num(row.aqpln_stk_ostk, locale) }),
+      row.dppln_stk_ostk && t('corp.ev.planDispose', { count: num(row.dppln_stk_ostk, locale) }),
+      row.bd_fta && t('corp.ev.bonds', { amount: krw(row.bd_fta)?.text ?? row.bd_fta }),
+      row.fdpp_fclt && t('corp.ev.facilityFunds', { amount: krw(row.fdpp_fclt)?.text }),
+      row.fdpp_op && t('corp.ev.workingCapital', { amount: krw(row.fdpp_op)?.text }),
+      row.mg_mth && t('corp.ev.mergerMethod', { value: row.mg_mth }),
+      row.dv_mth && t('corp.ev.splitMethod', { value: row.dv_mth }),
+      row.icnm && t('corp.ev.case', { value: row.icnm })
     ]
       .filter(Boolean)
       .slice(0, 3)
@@ -86,13 +93,13 @@
 <header class="corp-head">
   <div class="title-row">
     <h1>{name}</h1>
-    {#if cls && MARKET[cls]}<span class="chip {MARKET[cls].cls}">{MARKET[cls].label}</span>{/if}
+    {#if cls && MARKET[cls]}<span class="chip {MARKET[cls].cls}">{marketLabel(cls, locale)}</span>{/if}
     {#if stock}<span class="muted code">{stock}</span>{/if}
   </div>
   {#if data.company?.corp_name_eng}<p class="eng muted">{data.company.corp_name_eng}</p>{/if}
-  <nav class="tabs" aria-label="기업 정보">
-    {#each tabs as t}
-      <a href="?tab={t.id}" aria-current={data.tab === t.id ? 'page' : undefined} data-sveltekit-noscroll>{t.label}</a>
+  <nav class="tabs" aria-label={t('corp.tab.nav')}>
+    {#each tabs as tab}
+      <a href="?tab={tab.id}" aria-current={data.tab === tab.id ? 'page' : undefined} data-sveltekit-noscroll>{tab.label}</a>
     {/each}
   </nav>
 </header>
@@ -103,57 +110,57 @@
 {#if data.tab === 'overview'}
   <section class="grid">
     <div class="card">
-      <h2>기업개황</h2>
+      <h2>{t('corp.profile.title')}</h2>
       {#if data.company}
         <dl class="facts">
-          <dt>대표자</dt><dd>{data.company.ceo_nm || '—'}</dd>
-          <dt>설립일</dt><dd>{date(data.company.est_dt)}</dd>
-          <dt>결산월</dt><dd>{data.company.acc_mt ? `${Number(data.company.acc_mt)}월` : '—'}</dd>
-          <dt>업종코드</dt><dd>{data.company.induty_code || '—'}</dd>
-          <dt>주소</dt><dd>{data.company.adres || '—'}</dd>
-          <dt>홈페이지</dt>
+          <dt>{t('corp.profile.ceo')}</dt><dd>{data.company.ceo_nm || '—'}</dd>
+          <dt>{t('corp.profile.founded')}</dt><dd>{date(data.company.est_dt, locale)}</dd>
+          <dt>{t('corp.profile.fiscalYearEnd')}</dt><dd>{data.company.acc_mt ? t('corp.profile.fiscalMonth', { month: Number(data.company.acc_mt), monthName: monthName(Number(data.company.acc_mt)) }) : '—'}</dd>
+          <dt>{t('corp.profile.industry')}</dt><dd>{data.company.induty_code || '—'}</dd>
+          <dt>{t('corp.profile.address')}</dt><dd>{data.company.adres || '—'}</dd>
+          <dt>{t('corp.profile.website')}</dt>
           <dd>
             {#if data.company.hm_url}<a href={data.company.hm_url.startsWith('http') ? data.company.hm_url : `http://${data.company.hm_url}`} target="_blank" rel="noopener">{data.company.hm_url}</a>{:else}—{/if}
           </dd>
-          <dt>전화</dt><dd>{data.company.phn_no || '—'}</dd>
+          <dt>{t('corp.profile.phone')}</dt><dd>{data.company.phn_no || '—'}</dd>
         </dl>
       {:else}
-        <p class="muted">기업개황이 아직 없습니다.</p>
+        <p class="muted">{t('corp.profile.none')}</p>
       {/if}
       <div class="foot">
         <Freshness at={data.companyAt} error={data.companyError} />
         <form method="POST" action="?/refresh" use:enhance={submit}>
           <input type="hidden" name="what" value="company" />
-          <button class="btn ghost small" disabled={busy}>새로 고침</button>
+          <button class="btn ghost small" disabled={busy}>{t('corp.refresh')}</button>
         </form>
       </div>
     </div>
 
     <div class="card">
-      <h2>주요 재무 {#if data.headline}<span class="muted sub">{data.headline.bsns_year} 사업보고서</span>{/if}</h2>
+      <h2>{t('corp.kpi.title')} {#if data.headline}<span class="muted sub">{t('corp.kpi.period', { year: data.headline.bsns_year })}</span>{/if}</h2>
       {#if headlineOf(data.headline?.rows as Row[]).length}
         <div class="kpis">
           {#each headlineOf(data.headline?.rows as Row[]) as k}
-            {@const cur = krwShort(k.row?.thstrm_amount)}
-            {@const prev = krwShort(k.row?.frmtrm_amount)}
+            {@const cur = krw(k.row?.thstrm_amount)}
+            {@const prev = krw(k.row?.frmtrm_amount)}
             <div class="kpi">
               <span class="muted">{k.label}</span>
               <strong class="num" class:neg={cur?.negative} title={cur?.full} aria-label={cur?.full}>{cur?.text ?? '—'}</strong>
-              {#if prev}<span class="muted small num">전기 {prev.text}</span>{/if}
+              {#if prev}<span class="muted small num">{t('corp.kpi.prior', { amount: prev.text })}</span>{/if}
             </div>
           {/each}
         </div>
-        <p class="muted small">{headlineOf(data.headline?.rows as Row[])[0].basis} 기준 · <a href="?tab=financials">재무 자세히 →</a></p>
+        <p class="muted small">{t('corp.kpi.basis', { basis: headlineOf(data.headline?.rows as Row[])[0].basis })} · <a href="?tab=financials">{t('corp.kpi.details')}</a></p>
       {:else}
-        <p class="muted">{data.headlineError?.message ?? '사업보고서 재무 데이터가 없습니다.'}</p>
+        <p class="muted">{data.headlineError?.message ?? t('corp.kpi.none')}</p>
       {/if}
     </div>
   </section>
 
   <section class="card">
-    <h2>최근 공시</h2>
+    <h2>{t('corp.recent.title')}</h2>
     <FilingList filings={data.filings} today={data.today} showCorp={false} />
-    <p><a href="?tab=filings">전체 공시 보기 →</a></p>
+    <p><a href="?tab=filings">{t('corp.recent.all')}</a></p>
   </section>
 {:else if data.tab === 'filings'}
   <section class="card">
@@ -161,17 +168,17 @@
       <Freshness at={data.filingsAt} error={data.filingsError} />
       <form method="POST" action="?/refresh" use:enhance={submit}>
         <input type="hidden" name="what" value="filings" />
-        <button class="btn ghost small" disabled={busy}>새로 고침</button>
+        <button class="btn ghost small" disabled={busy}>{t('corp.refresh')}</button>
       </form>
     </div>
     <FilingList filings={data.filings} today={data.today} showCorp={false} />
-    <p class="muted small">최근 1년 공시 (최대 200건)</p>
+    <p class="muted small">{t('corp.filings.note')}</p>
   </section>
 {:else if data.tab === 'financials'}
   <form class="period card" method="GET">
     <input type="hidden" name="tab" value="financials" />
     <label>
-      <span class="muted small">사업연도</span>
+      <span class="muted small">{t('corp.fin.year')}</span>
       <select name="year" onchange={(e) => e.currentTarget.form?.requestSubmit()}>
         {#each Array.from({ length: data.maxYear - 2014 }, (_, i) => data.maxYear - i) as y}
           <option value={y} selected={y === data.year}>{y}</option>
@@ -179,53 +186,54 @@
       </select>
     </label>
     <fieldset class="seg">
-      <legend class="muted small">보고서</legend>
+      <legend class="muted small">{t('corp.fin.report')}</legend>
       {#each REPORTS as r}
         <label class:on={r.code === data.reprt}>
           <input type="radio" name="reprt" value={r.code} checked={r.code === data.reprt} onchange={(e) => e.currentTarget.form?.requestSubmit()} />
-          {r.label}
+          {reportCodeLabel(r.code, locale)}
         </label>
       {/each}
     </fieldset>
-    <noscript><button class="btn small">보기</button></noscript>
+    <noscript><button class="btn small">{t('corp.fin.show')}</button></noscript>
   </form>
 
   <section class="card">
     <div class="foot">
       <div>
-        <h2>{data.year} {reprtLabel(data.reprt)} · {fs === 'CFS' ? '연결' : '별도'}</h2>
+        <h2>{t('corp.fin.heading', { year: data.year, report: reprtLabel(data.reprt), basis: basisLabel(fs) })}</h2>
         <Freshness at={data.finAt} error={data.finError} />
       </div>
-      <div class="fs-toggle" role="group" aria-label="재무제표 기준">
-        <button class="btn small" class:ghost={fs !== 'CFS'} disabled={!hasCfs} onclick={() => (fsChoice = 'CFS')}>연결</button>
-        <button class="btn small" class:ghost={fs !== 'OFS'} onclick={() => (fsChoice = 'OFS')}>별도</button>
+      <div class="fs-toggle" role="group" aria-label={t('corp.fin.basisGroup')}>
+        <button class="btn small" class:ghost={fs !== 'CFS'} disabled={!hasCfs} onclick={() => (fsChoice = 'CFS')}>{t('corp.fin.consolidated')}</button>
+        <button class="btn small" class:ghost={fs !== 'OFS'} onclick={() => (fsChoice = 'OFS')}>{t('corp.fin.separate')}</button>
       </div>
     </div>
-    {#if !hasCfs && finRows.length}<p class="muted small">연결재무제표가 없어 별도 기준으로 표시합니다.</p>{/if}
+    {#if !hasCfs && finRows.length}<p class="muted small">{t('corp.fin.noConsolidated')}</p>{/if}
 
     {#if shown.length}
       {#each sections as [title, rows]}
         {@const isFlowQuarter = data.reprt !== '11011' && rows.some((r) => r.thstrm_add_amount)}
-        <h3 class="sj">{title}</h3>
+        {@const cur = rows[0].thstrm_nm ? periodName(rows[0].thstrm_nm, locale) : t('corp.fin.current')}
+        <h3 class="sj" title={locale === 'en' ? title : undefined}>{statementName(title, locale)}</h3>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th scope="col">계정</th>
-                <th scope="col" class="num">{rows[0].thstrm_nm ?? '당기'}{isFlowQuarter ? ' (3개월)' : ''}</th>
-                {#if isFlowQuarter}<th scope="col" class="num">누적</th>{/if}
-                <th scope="col" class="num hide-sm">{rows[0].frmtrm_nm ?? '전기'}</th>
-                <th scope="col" class="num hide-md">{rows[0].bfefrmtrm_nm ?? '전전기'}</th>
+                <th scope="col">{t('corp.fin.account')}</th>
+                <th scope="col" class="num">{isFlowQuarter ? t('corp.fin.threeMonths', { period: cur }) : cur}</th>
+                {#if isFlowQuarter}<th scope="col" class="num">{t('corp.fin.cumulative')}</th>{/if}
+                <th scope="col" class="num hide-sm">{rows[0].frmtrm_nm ? periodName(rows[0].frmtrm_nm, locale) : t('corp.fin.prior')}</th>
+                <th scope="col" class="num hide-md">{rows[0].bfefrmtrm_nm ? periodName(rows[0].bfefrmtrm_nm, locale) : t('corp.fin.priorPrior')}</th>
               </tr>
             </thead>
             <tbody>
               {#each rows as r}
-                {@const a = krwShort(r.thstrm_amount, '')}
-                {@const add = krwShort(r.thstrm_add_amount, '')}
-                {@const b = krwShort(r.frmtrm_amount, '')}
-                {@const c = krwShort(r.bfefrmtrm_amount, '')}
+                {@const a = krw(r.thstrm_amount, '')}
+                {@const add = krw(r.thstrm_add_amount, '')}
+                {@const b = krw(r.frmtrm_amount, '')}
+                {@const c = krw(r.bfefrmtrm_amount, '')}
                 <tr class:total={/총계|합계/.test(r.account_nm ?? '')}>
-                  <th scope="row">{r.account_nm}</th>
+                  <th scope="row" title={locale === 'en' ? r.account_nm : undefined}>{accountName(r.account_nm, locale)}</th>
                   <td class="num" class:neg={a?.negative} title={a?.full}>{a?.text ?? '—'}</td>
                   {#if isFlowQuarter}<td class="num" class:neg={add?.negative} title={add?.full}>{add?.text ?? '—'}</td>{/if}
                   <td class="num hide-sm" class:neg={b?.negative} title={b?.full}>{b?.text ?? '—'}</td>
@@ -237,16 +245,16 @@
         </div>
       {/each}
       <p class="muted small">
-        단위: {shown[0].currency || 'KRW'} · 출처: <a href={viewerUrl(shown[0].rcept_no ?? '')} target="_blank" rel="noopener">{data.year} {reprtLabel(data.reprt)} 원문</a>
+        {t('corp.fin.source', { currency: shown[0].currency || 'KRW' })} <a href={viewerUrl(shown[0].rcept_no ?? '')} target="_blank" rel="noopener">{t('corp.fin.sourceLink', { year: data.year, report: reprtLabel(data.reprt) })}</a>
       </p>
     {:else}
-      <p class="empty muted">{name} · {data.year} {reprtLabel(data.reprt)} · 재무 데이터가 없습니다. 아직 제출 전이거나 해당 보고서가 없는 기간일 수 있습니다.</p>
+      <p class="empty muted">{t('corp.fin.empty', { name, year: data.year, report: reprtLabel(data.reprt) })}</p>
     {/if}
     <form method="POST" action="?/refresh" use:enhance={submit}>
       <input type="hidden" name="what" value="financials" />
       <input type="hidden" name="year" value={data.year} />
       <input type="hidden" name="reprt" value={data.reprt} />
-      <button class="btn ghost small" disabled={busy}>이 기간 새로 조회</button>
+      <button class="btn ghost small" disabled={busy}>{t('corp.fin.refetch')}</button>
     </form>
   </section>
 {:else if data.tab === 'ownership'}
@@ -254,42 +262,42 @@
     <Freshness at={data.major.at} error={data.major.error ?? data.exec.error} />
     <form method="POST" action="?/refresh" use:enhance={submit}>
       <input type="hidden" name="what" value="ownership" />
-      <button class="btn ghost small" disabled={busy}>새로 고침</button>
+      <button class="btn ghost small" disabled={busy}>{t('corp.refresh')}</button>
     </form>
   </div>
 
   <section class="card">
-    <h2>대량보유 상황보고 <span class="muted sub">5% 보고 · {data.major.total}건</span></h2>
+    <h2>{t('corp.own.major')} <span class="muted sub">{t('corp.own.majorSub', { count: data.major.total })}</span></h2>
     <ul class="rows">
       {#each data.major.rows as r}
         <li>
-          <div class="line"><strong>{r.repror}</strong><span class="muted small">{date(r.rcept_dt)}</span></div>
+          <div class="line"><strong>{r.repror}</strong><span class="muted small">{date(r.rcept_dt, locale)}</span></div>
           <div class="line small">
-            <span>보유 <b class="num">{num(r.stkrt)}%</b> <span class="muted">({String(r.stkrt_irds ?? '').startsWith('-') ? '' : '+'}{num(r.stkrt_irds)}%p)</span></span>
-            <span class="muted num">{num(r.stkqy)}주</span>
+            <span>{t('corp.own.holding')} <b class="num">{num(r.stkrt, locale)}%</b> <span class="muted">({t('corp.own.pctChange', { sign: String(r.stkrt_irds ?? '').startsWith('-') ? '' : '+', change: num(r.stkrt_irds, locale) })})</span></span>
+            <span class="muted num">{t('corp.own.shares', { count: num(r.stkqy, locale) })}</span>
           </div>
           {#if r.report_resn}<p class="muted small resn">{r.report_resn}</p>{/if}
-          <a class="small" href={viewerUrl(r.rcept_no ?? '')} target="_blank" rel="noopener">원문</a>
+          <a class="small" href={viewerUrl(r.rcept_no ?? '')} target="_blank" rel="noopener">{t('corp.original')}</a>
         </li>
       {:else}
-        <li class="muted">대량보유 보고가 없습니다.</li>
+        <li class="muted">{t('corp.own.majorNone')}</li>
       {/each}
     </ul>
   </section>
 
   <section class="card">
-    <h2>임원·주요주주 소유보고 <span class="muted sub">{data.exec.total}건{data.exec.total > data.exec.rows.length ? ` 중 최근 ${data.exec.rows.length}건` : ''}</span></h2>
+    <h2>{t('corp.own.exec')} <span class="muted sub">{data.exec.total > data.exec.rows.length ? t('corp.own.execLatest', { total: data.exec.total, count: data.exec.rows.length }) : t('corp.own.execCount', { count: data.exec.total })}</span></h2>
     <ul class="rows">
       {#each data.exec.rows as r}
         <li>
-          <div class="line"><strong>{r.repror}</strong><span class="muted small">{date(r.rcept_dt)}</span></div>
+          <div class="line"><strong>{r.repror}</strong><span class="muted small">{date(r.rcept_dt, locale)}</span></div>
           <div class="line small">
-            <span class="muted">{[r.isu_exctv_ofcps, r.isu_main_shrholdr].filter((v) => v && v !== '-').join(' · ') || '—'}</span>
-            <span class="num">{num(r.sp_stock_lmp_cnt)}주 <span class="muted">({String(r.sp_stock_lmp_irds_cnt ?? '').startsWith('-') ? '' : '+'}{num(r.sp_stock_lmp_irds_cnt)})</span></span>
+            <span class="muted">{[r.isu_exctv_ofcps, r.isu_main_shrholdr].filter((v) => v && v !== '-').map((v) => personTerm(v as string, locale)).join(' · ') || '—'}</span>
+            <span class="num">{t('corp.own.shares', { count: num(r.sp_stock_lmp_cnt, locale) })} <span class="muted">({String(r.sp_stock_lmp_irds_cnt ?? '').startsWith('-') ? '' : '+'}{num(r.sp_stock_lmp_irds_cnt, locale)})</span></span>
           </div>
         </li>
       {:else}
-        <li class="muted">소유보고가 없습니다.</li>
+        <li class="muted">{t('corp.own.execNone')}</li>
       {/each}
     </ul>
   </section>
@@ -297,37 +305,37 @@
   <section class="card">
     <div class="foot">
       <div>
-        <h2>주요사항보고</h2>
+        <h2>{t('corp.ev.title')}</h2>
         <p class="muted small fresh">
-          {#if data.eventsAt}최근 1년 전체 유형 조회: <Freshness at={data.eventsAt} />{:else}전체 유형 조회 기록 없음 · 새 공시가 올라오면 자동으로 해당 유형만 가져옵니다{/if}
+          {#if data.eventsAt}{t('corp.ev.swept')} <Freshness at={data.eventsAt} />{:else}{t('corp.ev.notSwept')}{/if}
         </p>
       </div>
       <form method="POST" action="?/refresh" use:enhance={submit}>
         <input type="hidden" name="what" value="events" />
-        <button class="btn small" disabled={busy} aria-describedby="ev-cost">{busy ? '조회 중…' : '36개 유형 조회'}</button>
+        <button class="btn small" disabled={busy} aria-describedby="ev-cost">{busy ? t('corp.ev.checking') : t('corp.ev.checkAll')}</button>
       </form>
     </div>
-    <p id="ev-cost" class="muted small">전체 조회는 OpenDART 요청 36건을 사용합니다.</p>
+    <p id="ev-cost" class="muted small">{t('corp.ev.cost')}</p>
 
-    <div class="themes" role="group" aria-label="유형 필터">
-      <button class="chip" class:on={!theme} onclick={() => (theme = null)}>전체</button>
-      {#each data.themes as t}
-        <button class="chip" class:on={theme === t} onclick={() => (theme = t)}>{t}</button>
+    <div class="themes" role="group" aria-label={t('corp.ev.filter')}>
+      <button class="chip" class:on={!theme} onclick={() => (theme = null)}>{t('corp.ev.all')}</button>
+      {#each data.themes as th}
+        <button class="chip" class:on={theme === th} onclick={() => (theme = th)}>{themeLabel(th, locale)}</button>
       {/each}
     </div>
 
     <ol class="timeline">
       {#each shownEvents as e (e.endpoint + e.rcept_no)}
         <li>
-          <time class="muted small">{date(e.rcept_no.slice(0, 8))}</time>
+          <time class="muted small">{date(e.rcept_no.slice(0, 8), locale)}</time>
           <div>
-            <a href={viewerUrl(e.rcept_no)} target="_blank" rel="noopener"><strong>{e.title}</strong></a>
-            <span class="chip">{e.theme}</span>
+            <a href={viewerUrl(e.rcept_no)} target="_blank" rel="noopener" title={locale === 'en' ? e.title : undefined}><strong>{eventTitle(e.endpoint, e.title, locale)}</strong></a>
+            <span class="chip">{themeLabel(e.theme, locale)}</span>
             {#if eventSummary(e.row as Row)}<p class="small muted">{eventSummary(e.row as Row)}</p>{/if}
           </div>
         </li>
       {:else}
-        <li class="muted empty">{theme ? `${theme} 유형의 ` : ''}저장된 주요사항보고가 없습니다.</li>
+        <li class="muted empty">{theme ? t('corp.ev.emptyTheme', { theme: themeLabel(theme, locale) }) : t('corp.ev.empty')}</li>
       {/each}
     </ol>
   </section>

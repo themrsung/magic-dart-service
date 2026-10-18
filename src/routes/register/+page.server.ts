@@ -1,3 +1,4 @@
+import { ts } from '$lib/server/i18n';
 import { error, fail, redirect } from '@sveltejs/kit';
 import { audit } from '$lib/server/auth/audit';
 import { registrationMode } from '$lib/server/auth/config';
@@ -13,9 +14,9 @@ export const load = ({ url, locals }) => {
   const invite = url.searchParams.get('invite');
   const mode = registrationMode();
   if (invite) {
-    if (mode === 'closed' || !findValidInvite(invite)) error(400, '초대 링크가 만료되었거나 이미 사용되었습니다.');
+    if (mode === 'closed' || !findValidInvite(invite)) error(400, ts('auth.register.inviteInvalid'));
   } else if (mode !== 'open') {
-    error(403, '가입은 초대 링크로만 할 수 있습니다.');
+    error(403, ts('auth.register.inviteOnly'));
   }
   return { invite, minPassword: MIN_PASSWORD };
 };
@@ -24,12 +25,12 @@ export const actions = {
   default: async (event) => {
     const m = meta(event);
     const wait = hit(`register:ip:${m.ip}`, LIMITS.registerPerIp);
-    if (wait) return fail(429, { username: '', error: `시도가 너무 많습니다. ${retryText(wait)}` });
+    if (wait) return fail(429, { username: '', error: ts('auth.error.tooManyAttempts', { retry: retryText(wait) }) });
     const form = await event.request.formData();
     const username = String(form.get('username') ?? '');
     const password = String(form.get('password') ?? '');
     const invite = String(form.get('invite') ?? '') || null;
-    if (password !== String(form.get('confirm') ?? '')) return fail(400, { username, error: '비밀번호 확인이 일치하지 않습니다.' });
+    if (password !== String(form.get('confirm') ?? '')) return fail(400, { username, error: ts('auth.password.mismatch') });
     let user;
     try {
       user = await register(username, password, invite);

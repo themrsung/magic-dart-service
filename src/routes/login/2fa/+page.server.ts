@@ -1,3 +1,4 @@
+import { ts } from '$lib/server/i18n';
 import { fail, redirect } from '@sveltejs/kit';
 import { audit } from '$lib/server/auth/audit';
 import { recoveryCodesLeft, useRecoveryCode, verifyTotp } from '$lib/server/auth/factors';
@@ -36,7 +37,7 @@ export const actions = {
         clearPendingLogin(cookies, url, pending.id);
         redirect(303, `/login?next=${encodeURIComponent(next)}`);
       }
-      return fail(400, { error: kind === 'recovery' ? '복구 코드가 올바르지 않거나 이미 사용되었습니다.' : '인증 코드가 올바르지 않습니다.', kind });
+      return fail(400, { error: kind === 'recovery' ? ts('auth.twofa.badRecovery') : ts('auth.twofa.badCode'), kind });
     }
     if (kind === 'recovery') {
       const user = getUser(pending.userId)!;

@@ -9,6 +9,8 @@ import { purgeSessions, SESSION_COOKIE, validateSession } from '$lib/server/auth
 import { announceSetup, userCount } from '$lib/server/auth/users';
 import { startScheduler } from '$lib/server/jobs/runner';
 import { hostIdSource } from '$lib/server/hostid';
+import { LOCALE_COOKIE, pickLocale } from '$lib/i18n';
+import { runWithLocale } from '$lib/server/i18n';
 import { purgeExpired } from '$lib/server/mcp/oauth';
 import { openDartBaseUrl } from '$lib/server/dart';
 import { apiKeyStatus, hostBindingMode, writeApiKey } from '$lib/server/settings';
@@ -52,6 +54,14 @@ export const handle: Handle = async ({ event, resolve }) => {
     }
   }
 
+  const locale = pickLocale(event.cookies.get(LOCALE_COOKIE), request.headers.get('accept-language'));
+  event.locals.locale = locale;
+  return runWithLocale(locale, () => handleRequest({ event, resolve }));
+};
+
+const handleRequest: Handle = async ({ event, resolve }) => {
+  const { url } = event;
+  const locale = event.locals.locale;
   const session = validateSession(event.cookies.get(SESSION_COOKIE));
   event.locals.user = session?.user ?? null;
   event.locals.sessionId = session?.id ?? null;
@@ -62,7 +72,7 @@ export const handle: Handle = async ({ event, resolve }) => {
   }
   if (decision.kind === 'redirect') redirect(303, decision.location);
 
-  const response = await resolve(event);
+  const response = await resolve(event, { transformPageChunk: ({ html }) => html.replace('%lang%', locale) });
   response.headers.set('x-frame-options', 'DENY');
   response.headers.set('x-content-type-options', 'nosniff');
   response.headers.set('referrer-policy', 'strict-origin-when-cross-origin');

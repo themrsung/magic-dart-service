@@ -1,3 +1,4 @@
+import { ts } from '../i18n';
 import { timingSafeEqual } from 'node:crypto';
 import { db } from '../db';
 import { appOrigin, randomToken, registrationMode, sha256 } from './config';
@@ -33,7 +34,7 @@ export function normalizeUsername(raw: string): string {
 }
 
 export function usernameProblem(username: string): string | null {
-  return /^[a-z0-9][a-z0-9._-]{2,31}$/.test(username) ? null : '아이디는 영문 소문자·숫자·._- 3~32자이며 영문 또는 숫자로 시작해야 합니다.';
+  return /^[a-z0-9][a-z0-9._-]{2,31}$/.test(username) ? null : ts('auth.error.usernameRule');
 }
 
 export function userCount(): number {
@@ -52,7 +53,7 @@ export async function createUser(rawUsername: string, password: string, role: Ro
   const username = normalizeUsername(rawUsername);
   const problem = usernameProblem(username) ?? passwordProblem(password, username);
   if (problem) throw new AuthError(problem);
-  if (findUser(username)) throw new AuthError('이미 사용 중인 아이디입니다.');
+  if (findUser(username)) throw new AuthError(ts('auth.error.usernameTaken'));
   const now = Date.now();
   const hash = await hashPassword(password);
   const id = db()
@@ -66,7 +67,7 @@ export async function createUser(rawUsername: string, password: string, role: Ro
 
 export async function setPassword(userId: number, password: string): Promise<void> {
   const user = getUser(userId);
-  if (!user) throw new AuthError('사용자를 찾을 수 없습니다.');
+  if (!user) throw new AuthError(ts('auth.error.userNotFound'));
   const problem = passwordProblem(password, user.username);
   if (problem) throw new AuthError(problem);
   db().prepare('UPDATE users SET password_hash = ?, password_changed_at = ? WHERE id = ?').run(await hashPassword(password), Date.now(), userId);
@@ -99,8 +100,8 @@ function activeAdmins(): number {
 /** Disabling signs the user out everywhere and cuts off their MCP clients. */
 export function setDisabled(userId: number, disabled: boolean): void {
   const user = getUser(userId);
-  if (!user) throw new AuthError('사용자를 찾을 수 없습니다.');
-  if (disabled && user.role === 'admin' && !user.disabled_at && activeAdmins() <= 1) throw new AuthError('마지막 관리자는 비활성화할 수 없습니다.');
+  if (!user) throw new AuthError(ts('auth.error.userNotFound'));
+  if (disabled && user.role === 'admin' && !user.disabled_at && activeAdmins() <= 1) throw new AuthError(ts('auth.error.lastAdminDisable'));
   db().transaction(() => {
     db().prepare('UPDATE users SET disabled_at = ? WHERE id = ?').run(disabled ? Date.now() : null, userId);
     if (disabled) {
@@ -115,9 +116,9 @@ export function setDisabled(userId: number, disabled: boolean): void {
 /** A role change is a privilege change: the user's sessions are ended so they sign in again. */
 export function setRole(userId: number, role: Role): void {
   const user = getUser(userId);
-  if (!user) throw new AuthError('사용자를 찾을 수 없습니다.');
+  if (!user) throw new AuthError(ts('auth.error.userNotFound'));
   if (user.role === role) return;
-  if (user.role === 'admin' && !user.disabled_at && activeAdmins() <= 1) throw new AuthError('마지막 관리자의 권한은 바꿀 수 없습니다.');
+  if (user.role === 'admin' && !user.disabled_at && activeAdmins() <= 1) throw new AuthError(ts('auth.error.lastAdminRole'));
   db().transaction(() => {
     db().prepare('UPDATE users SET role = ? WHERE id = ?').run(role, userId);
     db().prepare('DELETE FROM sessions WHERE user_id = ?').run(userId);
@@ -228,10 +229,10 @@ export function revokeInvite(tokenHash: string): void {
  */
 export async function register(username: string, password: string, inviteToken: string | null): Promise<User> {
   const mode = registrationMode();
-  if (mode === 'closed') throw new AuthError('가입이 닫혀 있습니다.');
+  if (mode === 'closed') throw new AuthError(ts('auth.register.closed'));
   const invite = inviteToken ? findValidInvite(inviteToken) : undefined;
-  if (inviteToken && !invite) throw new AuthError('초대 링크가 만료되었거나 이미 사용되었습니다.');
-  if (!invite && mode !== 'open') throw new AuthError('초대 링크가 필요합니다.');
+  if (inviteToken && !invite) throw new AuthError(ts('auth.register.inviteInvalid'));
+  if (!invite && mode !== 'open') throw new AuthError(ts('auth.register.inviteRequired'));
   const user = await createUser(username, password, invite?.role ?? 'user');
   if (invite) {
     const used = db()
@@ -240,7 +241,7 @@ export async function register(username: string, password: string, inviteToken: 
     if (used.changes !== 1) {
       // Lost a race for the same invite.
       db().prepare('DELETE FROM users WHERE id = ?').run(user.id);
-      throw new AuthError('초대 링크가 만료되었거나 이미 사용되었습니다.');
+      throw new AuthError(ts('auth.register.inviteInvalid'));
     }
   }
   return user;

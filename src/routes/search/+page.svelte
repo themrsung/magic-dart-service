@@ -1,11 +1,15 @@
 <script lang="ts">
   import CorpSearch from '$lib/components/CorpSearch.svelte';
+  import { translator } from '$lib/i18n';
+
+  let { data } = $props();
+  const t = $derived(translator(data.locale));
 </script>
 
-<svelte:head><title>기업 검색 · MagicDART</title></svelte:head>
+<svelte:head><title>{t('corp.search.title')} · MagicDART</title></svelte:head>
 
-<h1>기업 검색</h1>
-<p class="muted">회사명(한글·영문)이나 6자리 종목코드로 찾을 수 있습니다.</p>
+<h1>{t('corp.search.title')}</h1>
+<p class="muted">{t('corp.search.lead')}</p>
 <CorpSearch autofocus />
 
 <style>

@@ -1,3 +1,4 @@
+import { ts } from '$lib/server/i18n';
 import { fail, redirect } from '@sveltejs/kit';
 import { audit } from '$lib/server/auth/audit';
 import { devAuthBypass } from '$lib/server/auth/devbypass';
@@ -17,12 +18,12 @@ export const actions = {
     if (userCount() > 0) redirect(303, '/login');
     const m = meta(event);
     const wait = hit(`setup:ip:${m.ip}`, LIMITS.setupPerIp);
-    if (wait) return fail(429, { username: '', error: `시도가 너무 많습니다. ${retryText(wait)}` });
+    if (wait) return fail(429, { username: '', error: ts('auth.error.tooManyAttempts', { retry: retryText(wait) }) });
     const form = await event.request.formData();
     const username = String(form.get('username') ?? '');
     const password = String(form.get('password') ?? '');
-    if (!checkSetupToken(String(form.get('token') ?? '').trim())) return fail(400, { username, error: '설정 토큰이 올바르지 않습니다. 서버 로그를 확인하세요.' });
-    if (password !== String(form.get('confirm') ?? '')) return fail(400, { username, error: '비밀번호 확인이 일치하지 않습니다.' });
+    if (!checkSetupToken(String(form.get('token') ?? '').trim())) return fail(400, { username, error: ts('auth.setup.badToken') });
+    if (password !== String(form.get('confirm') ?? '')) return fail(400, { username, error: ts('auth.password.mismatch') });
     let user;
     try {
       user = await createUser(username, password, 'admin');

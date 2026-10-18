@@ -1,5 +1,7 @@
 <script lang="ts">
+  import { page } from '$app/state';
   import { ago, kstDateTime } from '$lib/format';
+  import { translator } from '$lib/i18n';
 
   interface ErrorInfo {
     kind: string;
@@ -8,12 +10,14 @@
   }
 
   let { at, error }: { at: number | null; error?: ErrorInfo | null } = $props();
+  const locale = $derived(page.data.locale);
+  const t = $derived(translator(locale));
 </script>
 
 <p class="fresh muted">
-  {#if at}기준 <time title={kstDateTime(at)}>{ago(at)}</time>{:else}아직 조회된 적 없음{/if}
+  {#if at}{t('common.fresh.asOf')} <time title={kstDateTime(at, locale)}>{ago(at, locale)}</time>{:else}{t('common.fresh.never')}{/if}
   {#if error && error.kind !== 'nodata'}
-    <span class="err" role="status">· 새로 고침 실패: {error.message}{#if error.kind === 'auth' || error.kind === 'nokey'} (<a href="/admin">관리자 설정</a>){/if}</span>
+    <span class="err" role="status">· {t('common.fresh.failed', { message: error.message })}{#if error.kind === 'auth' || error.kind === 'nokey'} (<a href="/admin">{t('common.fresh.adminLink')}</a>){/if}</span>
   {/if}
 </p>
 

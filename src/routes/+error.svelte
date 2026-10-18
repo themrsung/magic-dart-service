@@ -1,13 +1,16 @@
 <script lang="ts">
   import { page } from '$app/state';
+  import { translator } from '$lib/i18n';
+
+  const t = $derived(translator(page.data.locale));
 </script>
 
 <svelte:head><title>{page.status} · MagicDART</title></svelte:head>
 
 <div class="card err">
-  <h1>{page.status === 404 ? '찾을 수 없습니다' : '문제가 발생했습니다'}</h1>
+  <h1>{page.status === 404 ? t('common.error.notFound') : t('common.error.generic')}</h1>
   <p class="muted">{page.error?.message}</p>
-  <a class="btn" href="/">처음으로</a>
+  <a class="btn" href="/">{t('common.error.home')}</a>
 </div>
 
 <style>

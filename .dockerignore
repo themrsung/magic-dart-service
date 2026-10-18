@@ -8,3 +8,4 @@ certs
 test
 *.md
 .dev-data
+.i18n-review

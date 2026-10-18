@@ -11,6 +11,7 @@
     "dev": "vite dev",
     "dev:mock": "node scripts/dev-mock.ts",
     "mock:opendart": "node test/mock-opendart/cli.ts",
+    "i18n:report": "node scripts/i18n-report.ts",
     "build": "vite build",
     "preview": "vite preview",
     "start": "node build",

@@ -1,6 +1,7 @@
 import { seal, unseal } from './auth/config';
 import { db } from './db';
 import { hostIdDigest, hostIdSource } from './hostid';
+import { ts } from './i18n';
 
 const API_KEY = 'opendart_api_key';
 const PURPOSE = 'opendart-api-key-v1';
@@ -30,7 +31,10 @@ export function hostBindingMode(): HostBinding {
 export class ApiKeyStorageError extends Error {}
 
 let keyVersion = 0;
-let cache: { stored: string; host: string; key: string | undefined; error: string | null } | undefined;
+/** Why a stored key can't be used; turned into text per request so it follows the user's language. */
+type KeyError = 'host' | 'secret' | null;
+
+let cache: { stored: string; host: string; key: string | undefined; error: KeyError } | undefined;
 
 function storedRow(): { value: string; updated_at: number } | undefined {
   return db().prepare('SELECT value, updated_at FROM settings WHERE key = ?').get(API_KEY) as { value: string; updated_at: number } | undefined;
@@ -44,7 +48,7 @@ function encode(key: string): string {
   const mode = hostBindingMode();
   const host = mode === 'off' ? null : hostIdDigest();
   if (mode === 'required' && !host)
-    throw new ApiKeyStorageError('API_KEY_HOST_BINDING=required 이지만 이 서버의 하드웨어 ID를 찾을 수 없습니다. HOST_ID_FILE을 설정하세요.');
+    throw new ApiKeyStorageError(ts('admin.key.bindingRequired'));
   return host ? `enc:h:${seal(key, PURPOSE, host)}` : `enc:s:${seal(key, PURPOSE)}`;
 }
 
@@ -68,12 +72,12 @@ function put(stored: string, updatedAt = Date.now()): void {
     .run(API_KEY, stored, updatedAt);
 }
 
-function load(): { key: string | undefined; error: string | null } {
+function load(): { key: string | undefined; error: KeyError } {
   const row = storedRow();
   if (!row) return { key: undefined, error: null };
   const host = hostIdDigest()?.toString('hex') ?? '';
   if (cache?.stored === row.value && cache.host === host) return cache;
-  let result: { key: string | undefined; error: string | null };
+  let result: { key: string | undefined; error: KeyError };
   try {
     const key = decode(row.value);
     result = { key, error: null };
@@ -88,13 +92,7 @@ function load(): { key: string | undefined; error: string | null } {
     }
   } catch {
     // Different APP_SECRET, different host, or a missing HOST_ID_FILE mount.
-    result = {
-      key: undefined,
-      error:
-        protectionOf(row.value) === 'host'
-          ? '저장된 API 키를 복호화할 수 없습니다. 이 키는 다른 서버(하드웨어 ID)나 다른 APP_SECRET으로 암호화되었습니다.'
-          : '저장된 API 키를 복호화할 수 없습니다. APP_SECRET이 바뀌었습니다.'
-    };
+    result = { key: undefined, error: protectionOf(row.value) === 'host' ? 'host' : 'secret' };
   }
   cache = { stored: row.value, host, ...result };
   return result;
@@ -138,7 +136,7 @@ export function apiKeyStatus(): {
     stored: !!row,
     updatedAt: row?.updated_at ?? null,
     protection: row ? protectionOf(row.value) : null,
-    error,
+    error: error === 'host' ? ts('admin.key.decryptHost') : error === 'secret' ? ts('admin.key.decryptSecret') : null,
     binding: hostBindingMode(),
     hostSource: hostBindingMode() === 'off' ? null : hostIdSource()
   };

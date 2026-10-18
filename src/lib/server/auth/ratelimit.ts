@@ -2,6 +2,7 @@
  * In-memory limits. The app runs as a single Node process, so this is authoritative; counters reset
  * on restart, which only ever loosens limits briefly.
  */
+import { ts } from '../i18n';
 
 interface Window {
   hits: number[];
@@ -85,5 +86,5 @@ export function resetLimits(): void {
 
 export function retryText(ms: number): string {
   const min = Math.ceil(ms / 60000);
-  return min <= 1 ? '잠시 후 다시 시도하세요.' : `${min}분 후 다시 시도하세요.`;
+  return min <= 1 ? ts('auth.retry.soon') : ts('auth.retry.minutes', { min });
 }

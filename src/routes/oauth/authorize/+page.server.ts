@@ -1,3 +1,4 @@
+import { ts } from '$lib/server/i18n';
 import { error, redirect } from '@sveltejs/kit';
 import { audit } from '$lib/server/auth/audit';
 import { meta, requireUser } from '$lib/server/auth/guard';
@@ -31,7 +32,7 @@ export const actions = {
   default: async (event) => {
     const user = requireUser(event);
     const wait = hit(`consent:${user.id}`, LIMITS.oauthConsentPerUser);
-    if (wait) error(429, `요청이 너무 많습니다. ${retryText(wait)}`);
+    if (wait) error(429, ts('auth.error.tooManyRequests', { retry: retryText(wait) }));
     const parsed = parseAuthRequest(event.url.searchParams, user.id);
     if (!parsed.ok) {
       if ('redirect' in parsed) redirect(303, parsed.redirect);
@@ -43,7 +44,7 @@ export const actions = {
     try {
       location = approve(parsed.req, metadata(event.url.origin).authorizationServer.issuer, user.id);
     } catch (err) {
-      if (err instanceof OAuthError) error(403, '다른 계정에 연결된 클라이언트입니다.');
+      if (err instanceof OAuthError) error(403, ts('auth.consent.otherAccount'));
       throw err;
     }
     audit({ event: 'oauth_client_approved', userId: user.id, username: user.username, ip: meta(event).ip, detail: `${parsed.req.client.client_name} (${parsed.req.client.client_id})` });

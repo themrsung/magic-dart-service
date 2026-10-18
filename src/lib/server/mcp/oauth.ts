@@ -1,3 +1,4 @@
+import { ts } from '../i18n';
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { appOrigin } from '../auth/config';
 import { db } from '../db';
@@ -155,11 +156,11 @@ export function parseAuthRequest(
   userId: number
 ): { ok: true; req: AuthRequest } | { ok: false; fatal: string } | { ok: false; redirect: string } {
   const client = getClient(params.get('client_id') ?? '');
-  if (!client || client.revoked_at) return { ok: false, fatal: '등록되지 않았거나 차단된 클라이언트입니다.' };
+  if (!client || client.revoked_at) return { ok: false, fatal: ts('auth.consent.unknownClient') };
   // A client belongs to whoever approved it first; nobody else can approve (and so use) it.
-  if (client.user_id !== null && client.user_id !== userId) return { ok: false, fatal: '다른 계정에 연결된 클라이언트입니다. MCP 클라이언트에서 연결을 다시 시작하세요.' };
+  if (client.user_id !== null && client.user_id !== userId) return { ok: false, fatal: ts('auth.consent.otherAccountRestart') };
   const redirect_uri = params.get('redirect_uri') ?? (client.redirect_uris.length === 1 ? client.redirect_uris[0] : '');
-  if (!redirect_uri || !redirectMatches(client.redirect_uris, redirect_uri)) return { ok: false, fatal: '등록된 redirect_uri와 일치하지 않습니다.' };
+  if (!redirect_uri || !redirectMatches(client.redirect_uris, redirect_uri)) return { ok: false, fatal: ts('auth.consent.redirectMismatch') };
   const state = params.get('state');
   const fail = (error: string, description: string) => ({ ok: false as const, redirect: errorRedirect(redirect_uri, state, error, description) });
   if (params.get('response_type') !== 'code') return fail('unsupported_response_type', 'response_type must be code');
@@ -202,7 +203,7 @@ export function approve(req: AuthRequest, issuer: string, userId: number): strin
 }
 
 export function deny(req: AuthRequest): string {
-  return errorRedirect(req.redirect_uri, req.state, 'access_denied', '사용자가 연결을 거부했습니다');
+  return errorRedirect(req.redirect_uri, req.state, 'access_denied', ts('auth.consent.denied'));
 }
 
 // ── Token endpoint ─────────────────────────────────────────────────────

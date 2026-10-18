@@ -6,6 +6,7 @@ import {
   RequestBudgetExceededError
 } from 'magic-dart';
 import { db } from './db';
+import { ts } from './i18n';
 import { AUTO_DAILY_BUDGET, TOTAL_DAILY_CAP, apiKeyVersion, readApiKey, redact } from './settings';
 import { kstDate } from './time';
 
@@ -13,13 +14,13 @@ export type Source = 'cron' | 'ui' | 'mcp' | 'setup';
 
 export class NoApiKeyError extends Error {
   constructor() {
-    super('OpenDART API 키가 설정되지 않았습니다');
+    super(ts('admin.dart.noKey'));
   }
 }
 
 export class DailyCapError extends Error {
   constructor() {
-    super('오늘 조회 한도에 도달했습니다');
+    super(ts('admin.dart.dailyCap'));
   }
 }
 
@@ -105,21 +106,20 @@ export interface ErrorInfo {
 
 /** Maps a thrown error to a UI-safe description. Never includes the key or request URLs. */
 export function describeError(err: unknown): ErrorInfo {
-  if (err instanceof NoApiKeyError) return { kind: 'nokey', message: err.message };
-  if (err instanceof DailyCapError) return { kind: 'quota', message: err.message };
-  if (err instanceof RequestBudgetExceededError)
-    return { kind: 'quota', message: '자동 수집의 오늘 요청 한도를 모두 사용했습니다' };
+  // Messages are produced here (not when the error was created) so they follow the current request's language.
+  if (err instanceof NoApiKeyError) return { kind: 'nokey', message: ts('admin.dart.noKey') };
+  if (err instanceof DailyCapError) return { kind: 'quota', message: ts('admin.dart.dailyCap') };
+  if (err instanceof RequestBudgetExceededError) return { kind: 'quota', message: ts('admin.dart.autoBudget') };
   if (err instanceof OpenDartValidationError) return { kind: 'validation', message: redact(err.message) };
   if (err instanceof OpenDartError) {
     const s = err.status;
-    if (err.isNoData) return { kind: 'nodata', status: s, message: '조회된 데이터가 없습니다' };
-    if (s === '010') return { kind: 'auth', status: s, message: '등록되지 않은 API 키입니다' };
-    if (s === '011') return { kind: 'auth', status: s, message: '사용할 수 없는 API 키입니다' };
-    if (s === '012')
-      return { kind: 'auth', status: s, message: '이 서버의 IP가 OpenDART에 등록되어 있지 않습니다' };
-    if (s === '901') return { kind: 'auth', status: s, message: 'API 키의 개인정보 보유기간이 만료되었습니다' };
-    if (s === '020') return { kind: 'quota', status: s, message: 'OpenDART 일일 요청 한도를 초과했습니다' };
-    if (s === '800') return { kind: 'maintenance', status: s, message: 'DART 시스템 점검 중입니다' };
+    if (err.isNoData) return { kind: 'nodata', status: s, message: ts('admin.dart.noData') };
+    if (s === '010') return { kind: 'auth', status: s, message: ts('admin.dart.010') };
+    if (s === '011') return { kind: 'auth', status: s, message: ts('admin.dart.011') };
+    if (s === '012') return { kind: 'auth', status: s, message: ts('admin.dart.012') };
+    if (s === '901') return { kind: 'auth', status: s, message: ts('admin.dart.901') };
+    if (s === '020') return { kind: 'quota', status: s, message: ts('admin.dart.020') };
+    if (s === '800') return { kind: 'maintenance', status: s, message: ts('admin.dart.800') };
     if (s === '100' || s === '101' || s === '021')
       return { kind: 'validation', status: s, message: redact(err.apiMessage || err.message) };
     return { kind: 'unknown', status: s, message: redact(err.apiMessage || err.message) };

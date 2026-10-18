@@ -1,6 +1,9 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
+  import { page } from '$app/state';
   import { MARKET } from '$lib/format';
+  import { translator } from '$lib/i18n';
+  import { marketLabel } from '$lib/i18n/dart-terms';
 
   interface Hit {
     corp_code: string;
@@ -16,6 +19,8 @@
   let active = $state(-1);
   let timer: ReturnType<typeof setTimeout> | undefined;
   const listId = 'corp-search-list';
+  const locale = $derived(page.data.locale);
+  const t = $derived(translator(locale));
 
   function onInput() {
     clearTimeout(timer);
@@ -49,12 +54,12 @@
 </script>
 
 <div class="search">
-  <label class="visually-hidden" for="corp-q">기업 검색</label>
+  <label class="visually-hidden" for="corp-q">{t('corp.search.title')}</label>
   <!-- svelte-ignore a11y_autofocus -->
   <input
     id="corp-q"
     type="search"
-    placeholder="회사명 또는 종목코드 (예: 삼성전자, 005930)"
+    placeholder={t('corp.search.placeholder')}
     autocomplete="off"
     role="combobox"
     aria-expanded={hits.length > 0}
@@ -71,8 +76,8 @@
         <li id="hit-{i}" role="option" aria-selected={i === active}>
           <a href="/corp/{h.corp_code}" class:active={i === active}>
             <span class="name">{h.corp_name}</span>
-            {#if h.corp_cls && MARKET[h.corp_cls]}<span class="chip {MARKET[h.corp_cls].cls}">{MARKET[h.corp_cls].label}</span>{/if}
-            {#if h.stock_code}<span class="muted code">{h.stock_code}</span>{:else}<span class="muted code">비상장</span>{/if}
+            {#if h.corp_cls && MARKET[h.corp_cls]}<span class="chip {MARKET[h.corp_cls].cls}">{marketLabel(h.corp_cls, locale)}</span>{/if}
+            {#if h.stock_code}<span class="muted code">{h.stock_code}</span>{:else}<span class="muted code">{t('corp.search.unlisted')}</span>{/if}
           </a>
         </li>
       {/each}
