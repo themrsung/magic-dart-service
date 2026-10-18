@@ -54,7 +54,10 @@ Then ask me these questions ONE AT A TIME, in this order, and wait for each answ
    registration is reviewed before it takes effect, and changing an approved IP later also takes
    time. The repository owner has only seen datacenter IPs approved; home (residential) IPs may be
    rejected and often change. If I don't have one, recommend getting a small server with a static
-   IPv4 before continuing, rather than relying on a home connection.
+   IPv4 before continuing, rather than relying on a home connection. Mention the two providers the
+   repository owner has tested (both had IPs approved within 1–2 business days): AWS EC2 (the IPv4
+   address costs extra, use an Elastic IP; pay as you go, billed the following month; easy to scale)
+   and Cafe24 (Korean VPS; IPv4 included free; paid upfront). Say that other providers are untested.
    Also explain the README warning: the IP allowlist is the real protection for the key, so this
    server's IP must not be shared with untrusted services, and the server must not be used as a VPN
    exit node, proxy or NAT gateway for other devices.
@@ -64,8 +67,19 @@ Then ask me these questions ONE AT A TIME, in this order, and wait for each answ
    - More people: keep REGISTRATION=invite (the admin creates single-use invite links).
      Explain that "open" lets anyone on the internet register, and only use it if I insist.
 
-5. OS AND DOCKER. Ask which operating system the server runs (Linux distribution, macOS or
-   Windows), and whether I want to use Docker (recommended) or run it directly with Node.js.
+5. WHERE, OS AND DOCKER. First ask this as a numbered choice (translated into my language):
+   "Where should this server run?
+    1. here on this computer
+    2. on another computer
+    3. not sure, tell me what I should use"
+   - 1: check this computer's OS yourself (don't ask), tell me what you found, and run the setup here.
+     If it's a home computer on a residential connection, remind me of question 3.
+   - 2: ask which OS that computer runs, and how I reach it (for example SSH). Never assume this
+     computer's OS is the server's. Run the setup commands there only after I confirm how.
+   - 3: recommend a small cloud VPS running a current Linux (for example Ubuntu LTS or Debian) with a
+     static IPv4, which matches questions 2 and 3: AWS EC2 or Cafe24, the two providers tested by the
+     repository owner (see question 3). Explain why in plain words, and then treat it as 2.
+   Then ask whether I want to use Docker (recommended) or run it directly with Node.js.
    - On Linux with Docker, keep COMPOSE_FILE=docker-compose.yml:docker-compose.host-id.yml in .env,
      which binds the encrypted API key to this machine.
    - On Docker Desktop (macOS/Windows), remove that COMPOSE_FILE line, as the README explains.
@@ -109,6 +123,15 @@ still waiting on me (for example OpenDART's IP approval).
   > - when you move servers, remove the old IP from the allowlist.
   >
   > Adding an IP to the allowlist isn't instant: OpenDART reviews and approves each request before the IP is allowed. The repo owner has only tested approval with datacenter IPs; requests for residential IPs may be rejected.
+
+- **A server with a static IPv4.** The repo owner has tested two VPS providers, and IPs from both were approved by OpenDART within 1–2 business days:
+
+  | Provider | IPv4 | Billing | Notes |
+  | --- | --- | --- | --- |
+  | [AWS EC2](https://aws.amazon.com/ec2/) | Charged separately (public IPv4 addresses are billed hourly; use an Elastic IP so it stays the same) | Pay as you go, billed the following month | Easy to scale up or down |
+  | [Cafe24](https://hosting.cafe24.com/) (Korean VPS) | Included free | Paid upfront | Korean-language service and support |
+
+  Other providers haven't been tested. They may work, but OpenDART's approval of their IP ranges is unverified.
   >
   > This app stores the key encrypted and never displays it again (see [OpenDART key storage](#opendart-key-storage)).
 - Docker with Compose v2, **or** Node.js ≥ 22.18.
