@@ -8,7 +8,7 @@
 import { spawn } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import { snapshotAgeDays, startMockOpenDart } from '../test/mock-opendart/server.ts';
-import { SNAPSHOT_DATE } from '../test/mock-opendart/data.ts';
+import { CORPS, SNAPSHOT_DATE } from '../test/mock-opendart/data.ts';
 
 const mockPort = Number(process.env.MOCK_OPENDART_PORT ?? 8790);
 const devPort = Number(process.env.DEV_PORT ?? 5173);
@@ -20,6 +20,10 @@ const mock = await startMockOpenDart(mockPort, {
 });
 const base = mock.baseUrl.replace('127.0.0.1', 'localhost');
 console.log(`[mock-opendart] ${base} (snapshot ${SNAPSHOT_DATE}, ${snapshotAgeDays()} days old${shiftDates ? ', dates shifted to today' : ''})`);
+const MARKETS: Record<string, string> = { Y: 'KOSPI', K: 'KOSDAQ', N: 'KONEX', E: 'unlisted' };
+console.log('[mock-opendart] fictional companies:');
+for (const c of CORPS)
+  console.log(`[mock-opendart]   ${c.corp_code}  ${c.corp_name} (${c.corp_eng_name.replace(' (MOCK)', '')})  ${MARKETS[c.corp_cls]}${c.stock_code ? ` ${c.stock_code}` : ''}`);
 if (snapshotAgeDays() > 180) console.warn('[mock-opendart] WARNING: the mock data is over 6 months old; the real API may have changed.');
 
 mkdirSync('.dev-data', { recursive: true });
