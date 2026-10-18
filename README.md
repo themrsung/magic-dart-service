@@ -21,21 +21,25 @@ in plain words, run commands for me when you can, and stop to ask before anythin
 opens network ports, or changes system settings. Follow the repository's README.md for details and
 read it before you start; if this prompt and the README disagree, the README wins.
 
-0. GET THE CODE (do this first, before asking me anything). The official repository is
-   https://github.com/themrsung/magic-dart-service
+0. GET THE CODE (do this first, before asking me anything). Install the published npm package
+   `magic-dart-service` (https://www.npmjs.com/package/magic-dart-service). Use the source repository
+   https://github.com/themrsung/magic-dart-service (git clone) only if I insist, or if I later choose
+   Docker or want to change the code.
    Check the current working directory and tell me briefly what you found:
-   - Already inside a clone of this repository (its `git remote -v` points at the URL above, or
-     package.json says "magic-dart-service"): run `git status`. If there are no local changes,
-     update with `git pull --ff-only`. If there are local changes or the pull fails, show me and
-     ask before doing anything else. Never discard my changes.
-   - A `magic-dart-service` folder exists here: go into it and apply the rule above.
-   - Not here: clone it automatically with
-     `git clone https://github.com/themrsung/magic-dart-service.git` and go into the new folder.
-     (If git isn't installed, explain how to install it for my OS first.)
-   - A clone whose remote points somewhere else (a fork or mirror): tell me and ask which one to use.
+   - An npm installation (a package.json that depends on magic-dart-service, or a
+     node_modules/magic-dart-service folder): update it with `npm install magic-dart-service@latest`.
+   - A `magic-dart` folder here that holds such an installation: go into it and apply the rule above.
+   - A git clone of the repository (its `git remote -v` points at the URL above): run `git status`.
+     If there are no local changes, update with `git pull --ff-only`. If there are local changes or
+     the pull fails, show me and ask before doing anything else. Never discard my changes. If its
+     remote points somewhere else (a fork or mirror), tell me and ask which one to use.
+   - None of these: create a folder named `magic-dart`, go into it, and run `npm init -y` and then
+     `npm install magic-dart-service`. If Node.js (version 22.18 or later) and npm aren't installed,
+     explain how to install them for my OS and ask before installing.
    If a `.env` file already exists, this is an existing installation: never overwrite it. Read it,
    tell me which settings are already filled in (never print APP_SECRET), and only change what I ask.
-   Then read README.md from the updated code before continuing.
+   Then read the README (node_modules/magic-dart-service/README.md, or README.md in a clone) before
+   continuing.
 
 Then ask me these questions ONE AT A TIME, in this order, and wait for each answer:
 
@@ -79,34 +83,51 @@ Then ask me these questions ONE AT A TIME, in this order, and wait for each answ
    - 3: recommend a small cloud VPS running a current Linux (for example Ubuntu LTS or Debian) with a
      static IPv4, which matches questions 2 and 3: AWS EC2 or Cafe24, the two providers tested by the
      repository owner (see question 3). Explain why in plain words, and then treat it as 2.
-   Then ask whether I want to use Docker (recommended) or run it directly with Node.js.
-   - On Linux with Docker, keep COMPOSE_FILE=docker-compose.yml:docker-compose.host-id.yml in .env,
-     which binds the encrypted API key to this machine.
-   - On Docker Desktop (macOS/Windows), remove that COMPOSE_FILE line, as the README explains.
+   Then explain the two ways to run it and ask which I want:
+   - Node.js directly (the default, using the npm installation from step 0): it runs with
+     `npx magic-dart-service`, a system service keeps it running after reboots (systemd on Linux),
+     and Caddy installed on the server provides HTTPS. On Linux the encrypted API key is bound to
+     this machine automatically.
+   - Docker: this needs the source code, so you would clone the repository at this point (only if I
+     choose it). On Linux keep COMPOSE_FILE=docker-compose.yml:docker-compose.host-id.yml in .env,
+     which binds the encrypted API key to this machine. On Docker Desktop (macOS/Windows) remove that
+     line, as the README explains.
    - Ask whether I have a domain name. HTTPS is required (passkeys and secure cookies need it). If I
-     have no reverse proxy yet, use the built-in Caddy profile, which gets certificates automatically.
+     have no reverse proxy yet, use Caddy, which gets certificates automatically (installed on the
+     server for Node.js, or the built-in Caddy profile for Docker).
 
 6. COMPLETE THE SETUP. Then, checking each step works before moving on:
-   a. Install what's missing (git, Docker with Compose v2, or Node.js 22.18+). Ask before installing.
-   b. In the folder from step 0, copy .env.example to .env (skip if .env already exists).
-   c. Fill in .env: ORIGIN (https://my-domain), DOMAIN, REGISTRATION from question 4, and a fresh
-      APP_SECRET generated with `openssl rand -base64 48`. Don't show me the secret in full and tell
-      me not to share or commit .env. Leave everything else at its default unless the README says
-      otherwise for my setup.
+   a. Install what's missing: Node.js 22.18 or later, and Caddy if I have no reverse proxy (for
+      Docker instead: git and Docker with Compose v2). Ask before installing.
+   b. Create .env in the installation folder from step 0 by copying
+      node_modules/magic-dart-service/.env.example (or .env.example in a clone). Skip this if .env
+      already exists.
+   c. Fill in .env: ORIGIN (https://my-domain), REGISTRATION from question 4, and a fresh APP_SECRET
+      generated with `openssl rand -base64 48`. For Node.js also set HOST=127.0.0.1, so the app can
+      only be reached through the reverse proxy on the same machine. For the Docker Caddy profile also
+      set DOMAIN. Don't show me the secret in full, and tell me not to share or commit .env. Leave
+      everything else at its default unless the README says otherwise for my setup.
    d. DNS: help me point my domain's A record at the server's static IPv4, and check it resolves.
-   e. Firewall: with the Caddy profile only ports 80 and 443 need to be open. Never expose port 3000
-      (the app) directly to the internet.
-   f. Start it: `docker compose --profile caddy up -d --build` (Caddy) or
-      `docker compose up -d --build` (my own reverse proxy), or the "Without Docker" steps.
-   g. First run: find the one-time setup token in the logs (`docker compose logs app`), open
-      https://my-domain/setup and create the admin account with a long password (10+ characters;
-      a sentence works well). Then, on the account page (계정), set up a passkey or an authenticator
-      app and store the recovery codes somewhere safe, offline.
+   e. Firewall: only ports 80 and 443 need to be open. Never expose port 3000 (the app) directly to
+      the internet.
+   f. Start it:
+      - Node.js: run `npx magic-dart-service` once in the foreground to check it starts, then set it
+        up as a system service and configure Caddy as in the README ("Running as a service"). Ask
+        before creating the service or changing Caddy's configuration.
+      - Docker: `docker compose --profile caddy up -d --build` (Caddy) or
+        `docker compose up -d --build` (my own reverse proxy).
+   g. First run: find the one-time setup token in the logs (`journalctl -u magic-dart-service` for the
+      service, or `docker compose logs app`), open https://my-domain/setup and create the admin account
+      with a long password (at least 10 characters; a sentence works well). Then, on the account page
+      (계정), set up a passkey or an authenticator app and store the recovery codes somewhere safe,
+      offline.
    h. On the admin page (관리), I enter my OpenDART API key myself. Show me the server's public IP
       listed there and remind me to register exactly that IP with OpenDART and wait for approval.
    i. If more than one user: show me how to create an invite link on the admin page.
    j. Finally, explain how to connect an MCP client (README "Connecting MCP clients"), how to update
-      (git pull, then rebuild), and that I should back up the data volume and keep .env safe.
+      (`npm install magic-dart-service@latest` and restart the service; for Docker, `git pull` and
+      rebuild), and that I should back up the data (the `data` folder, or the Docker volume) and keep
+      .env safe.
 
 At the end, give me a short summary of what was set up, where the configuration lives, and anything
 still waiting on me (for example OpenDART's IP approval).
@@ -172,7 +193,71 @@ location / {
 }
 ```
 
-### Without Docker
+### Install from npm
+
+With Node.js 22.18 or later, you don't need to clone the repository:
+
+```sh
+mkdir magic-dart && cd magic-dart
+npm install magic-dart-service
+cp node_modules/magic-dart-service/.env.example .env   # then edit ORIGIN and APP_SECRET
+npx magic-dart-service                                 # or: npx magic-dart-service --env-file /path/to/.env
+```
+
+`./.env` is loaded automatically, the database goes to `./data` (change it with `DATA_DIR`), and the server listens on `HOST`:`PORT` (default `0.0.0.0:3000`). Behind a reverse proxy on the same machine, **set `HOST=127.0.0.1`**: the app trusts the client IP the proxy forwards (`ADDRESS_HEADER`), so nothing else may reach it directly. To update, run `npm install magic-dart-service@latest` and restart. `npx magic-dart-service --help` lists the options.
+
+#### Running as a service (Linux)
+
+A dedicated system user, a systemd unit that restarts the app after reboots and failures, and Caddy for HTTPS:
+
+```sh
+sudo useradd --system --create-home --home-dir /opt/magic-dart magicdart
+sudo -u magicdart sh -c 'cd /opt/magic-dart && npm init -y && npm install magic-dart-service'
+sudo -u magicdart cp /opt/magic-dart/node_modules/magic-dart-service/.env.example /opt/magic-dart/.env
+sudo -u magicdart editor /opt/magic-dart/.env    # ORIGIN, APP_SECRET, HOST=127.0.0.1
+```
+
+`/etc/systemd/system/magic-dart-service.service` (check the node path with `which node`):
+
+```ini
+[Unit]
+Description=MagicDART service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=magicdart
+WorkingDirectory=/opt/magic-dart
+ExecStart=/usr/bin/node node_modules/magic-dart-service/bin/magic-dart-service.js
+Restart=on-failure
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/magic-dart/data
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```sh
+sudo -u magicdart mkdir -p /opt/magic-dart/data
+sudo systemctl daemon-reload && sudo systemctl enable --now magic-dart-service
+journalctl -u magic-dart-service -f        # the setup token appears here on first start
+```
+
+Then install [Caddy](https://caddyserver.com/docs/install) and point it at the app in `/etc/caddy/Caddyfile`, then `sudo systemctl reload caddy`:
+
+```
+dart.example.com {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:3000
+}
+```
+
+To update: `sudo -u magicdart sh -c 'cd /opt/magic-dart && npm install magic-dart-service@latest'` and `sudo systemctl restart magic-dart-service`. Back up `/opt/magic-dart/data` and `.env`.
+
+### Without Docker, from source
 
 ```sh
 npm ci
@@ -279,6 +364,17 @@ ORIGIN=http://localhost:5173 APP_SECRET=dev-secret-dev-secret-dev-secret-00 npm 
 ```
 
 `OPENDART_BASE_URL` (default `https://opendart.fss.or.kr/api`) overrides the API root, for testing only.
+
+### Releasing to npm (maintainers)
+
+```sh
+npm login                      # once per machine
+npm version patch              # or minor / major: bumps package.json, commits and tags
+npm publish                    # runs check + tests, builds, then uploads
+git push --follow-tags
+```
+
+`npm publish` runs `prepublishOnly` (type check and tests), then `prepack` (production build). The package contains only `bin/`, `build/`, `.env.example`, `README.md` and `LICENSE`. Check it first with `npm pack --dry-run`.
 
 ## License
 

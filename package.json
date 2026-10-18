@@ -1,9 +1,38 @@
 {
   "name": "magic-dart-service",
   "version": "0.1.0",
-  "private": true,
+  "description": "Self-hosted web app and MCP server over a local cache of OpenDART (Korean electronic disclosure) data, with accounts, passkeys and an English UI.",
+  "keywords": [
+    "opendart",
+    "dart",
+    "korea",
+    "disclosure",
+    "전자공시",
+    "mcp",
+    "model-context-protocol",
+    "sveltekit",
+    "self-hosted",
+    "k-ifrs"
+  ],
+  "homepage": "https://github.com/themrsung/magic-dart-service#readme",
+  "bugs": {
+    "url": "https://github.com/themrsung/magic-dart-service/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/themrsung/magic-dart-service.git"
+  },
+  "author": "Min Jun Sung",
   "license": "MIT",
   "type": "module",
+  "bin": {
+    "magic-dart-service": "bin/magic-dart-service.js"
+  },
+  "files": [
+    "bin",
+    "build",
+    ".env.example"
+  ],
   "engines": {
     "node": ">=22.18"
   },
@@ -16,7 +45,9 @@
     "preview": "vite preview",
     "start": "node build",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run check && npm test"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",
