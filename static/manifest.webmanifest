@@ -1,0 +1,22 @@
+{
+  "name": "MagicDART",
+  "short_name": "MagicDART",
+  "description": "전자공시(OpenDART) 데이터를 캐시해 보여주는 셀프호스팅 앱",
+  "lang": "ko",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FFF8EE",
+  "theme_color": "#1F1300",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ],
+  "shortcuts": [
+    { "name": "최근 공시", "url": "/" },
+    { "name": "기업 검색", "url": "/search" }
+  ]
+}

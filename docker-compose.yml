@@ -1,0 +1,54 @@
+# MagicDART service: the app, plus an optional Caddy reverse proxy with automatic HTTPS.
+#
+#   docker compose up -d                      # app only, on 127.0.0.1:3000 (put your own proxy in front)
+#   docker compose --profile caddy up -d      # app + Caddy serving https://${DOMAIN}
+#
+# Configuration comes from .env (see .env.example).
+name: magic-dart-service
+
+services:
+  app:
+    build: .
+    image: magic-dart-service:latest
+    environment:
+      ORIGIN: ${ORIGIN:?set ORIGIN in .env, e.g. https://dart.example.com}
+      APP_SECRET: ${APP_SECRET:?set APP_SECRET in .env (openssl rand -base64 48)}
+      REGISTRATION: ${REGISTRATION:-invite}
+      SETUP_TOKEN: ${SETUP_TOKEN:-}
+      AUTO_DAILY_BUDGET: ${AUTO_DAILY_BUDGET:-2000}
+      TOTAL_DAILY_CAP: ${TOTAL_DAILY_CAP:-18000}
+      EGRESS_IP_LOOKUP: ${EGRESS_IP_LOOKUP:-on}
+      API_KEY_HOST_BINDING: ${API_KEY_HOST_BINDING:-auto}
+      # Client IPs (for rate limiting) come from the proxy's X-Forwarded-For. Only trust it when a
+      # proxy you control is the sole way in, as with the Caddy profile or the loopback port below.
+      ADDRESS_HEADER: ${ADDRESS_HEADER:-X-Forwarded-For}
+      XFF_DEPTH: ${XFF_DEPTH:-1}
+    ports:
+      # Loopback only by default, for a reverse proxy on the same host.
+      - ${APP_BIND:-127.0.0.1:3000}:3000
+    volumes:
+      - app-data:/data
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    profiles: [caddy]
+    depends_on:
+      - app
+    environment:
+      # Required for this profile: the hostname Caddy gets a certificate for.
+      DOMAIN: ${DOMAIN:-}
+    ports:
+      - 80:80
+      - 443:443
+      - 443:443/udp
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    restart: unless-stopped
+
+volumes:
+  app-data:
+  caddy-data:
+  caddy-config:

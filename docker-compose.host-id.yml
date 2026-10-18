@@ -1,0 +1,15 @@
+# Binds the encrypted OpenDART key to this host's hardware identity (Linux hosts).
+# Enable with COMPOSE_FILE=docker-compose.yml:docker-compose.host-id.yml in .env.
+# Don't use it with Docker Desktop (macOS/Windows): there /etc/machine-id resolves to the Docker VM's
+# own ID, not the computer's, and it changes when Docker Desktop is reset.
+services:
+  app:
+    environment:
+      HOST_ID_FILE: /run/host-id
+    volumes:
+      - type: bind
+        source: /etc/machine-id
+        target: /run/host-id
+        read_only: true
+        bind:
+          create_host_path: false

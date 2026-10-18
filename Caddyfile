@@ -1,0 +1,10 @@
+# Used by the `caddy` compose profile. Caddy obtains and renews the certificate for $DOMAIN
+# automatically (ports 80 and 443 must reach this host and DNS must point at it).
+{$DOMAIN} {
+	encode zstd gzip
+	request_body {
+		max_size 2MB
+	}
+	# Caddy replaces any client-supplied X-Forwarded-For with the real client address.
+	reverse_proxy app:3000
+}
