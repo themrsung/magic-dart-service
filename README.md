@@ -21,7 +21,23 @@ in plain words, run commands for me when you can, and stop to ask before anythin
 opens network ports, or changes system settings. Follow the repository's README.md for details and
 read it before you start; if this prompt and the README disagree, the README wins.
 
-Ask me these questions ONE AT A TIME, in this order, and wait for each answer:
+0. GET THE CODE (do this first, before asking me anything). The official repository is
+   https://github.com/themrsung/magic-dart-service
+   Check the current working directory and tell me briefly what you found:
+   - Already inside a clone of this repository (its `git remote -v` points at the URL above, or
+     package.json says "magic-dart-service"): run `git status`. If there are no local changes,
+     update with `git pull --ff-only`. If there are local changes or the pull fails, show me and
+     ask before doing anything else. Never discard my changes.
+   - A `magic-dart-service` folder exists here: go into it and apply the rule above.
+   - Not here: clone it automatically with
+     `git clone https://github.com/themrsung/magic-dart-service.git` and go into the new folder.
+     (If git isn't installed, explain how to install it for my OS first.)
+   - A clone whose remote points somewhere else (a fork or mirror): tell me and ask which one to use.
+   If a `.env` file already exists, this is an existing installation: never overwrite it. Read it,
+   tell me which settings are already filled in (never print APP_SECRET), and only change what I ask.
+   Then read README.md from the updated code before continuing.
+
+Then ask me these questions ONE AT A TIME, in this order, and wait for each answer:
 
 1. LANGUAGE. Ask which language I want to use for this setup (for example 한국어 or English).
    Use that language for everything that follows, including your explanations.
@@ -58,8 +74,7 @@ Ask me these questions ONE AT A TIME, in this order, and wait for each answer:
 
 6. COMPLETE THE SETUP. Then, checking each step works before moving on:
    a. Install what's missing (git, Docker with Compose v2, or Node.js 22.18+). Ask before installing.
-   b. Clone the repository (ask me for its URL if we're not already inside a clone) and copy
-      .env.example to .env.
+   b. In the folder from step 0, copy .env.example to .env (skip if .env already exists).
    c. Fill in .env: ORIGIN (https://my-domain), DOMAIN, REGISTRATION from question 4, and a fresh
       APP_SECRET generated with `openssl rand -base64 48`. Don't show me the secret in full and tell
       me not to share or commit .env. Leave everything else at its default unless the README says
