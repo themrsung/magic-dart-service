@@ -1,6 +1,6 @@
 {
   "name": "magic-dart-service",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Self-hosted web app and MCP server over a local cache of OpenDART (Korean electronic disclosure) data, with accounts, passkeys and an English UI.",
   "keywords": [
     "opendart",
