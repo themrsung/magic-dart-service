@@ -10,7 +10,12 @@ A self-hostable web app (installable PWA) and MCP server over a local cache of [
 ## Requirements
 
 - An **OpenDART API key** (free: [opendart.fss.or.kr](https://opendart.fss.or.kr) → 인증키 신청). OpenDART only accepts calls from IP addresses registered with the key, so register your server's public IP (the admin page shows it).
-  > **Keep your own copy of the key.** The DART website has no self-service option to renew or reissue an API key; if you lose it you have to contact OpenDART support. This app stores the key encrypted and never displays it again, and the stored copy can't be recovered after a host or `APP_SECRET` change (see [OpenDART key storage](#opendart-key-storage)).
+  > **The IP allowlist is the real protection, not the key.** You can look the key up again at any time by signing in to OpenDART, but changing it may require contacting OpenDART support (unverified; it may not be possible at all). So assume a leaked key stays valid, and treat every program that sends traffic from the registered IP as able to use your quota:
+  > - don't run untrusted or shared services (other people's apps, public proxies, seedboxes, …) on the same public IP;
+  > - don't use the server as a VPN **exit node** (WireGuard, mesh VPNs), proxy or NAT gateway for other devices, since their traffic would leave from the allowlisted IP;
+  > - when you move servers, remove the old IP from the allowlist.
+  >
+  > This app stores the key encrypted and never displays it again (see [OpenDART key storage](#opendart-key-storage)).
 - Docker with Compose v2, **or** Node.js ≥ 22.18.
 - A domain name and HTTPS for anything beyond local testing. Passkeys and `Secure` cookies need a secure origin (`https://…` or `http://localhost`).
 
@@ -68,7 +73,7 @@ The app listens on `HOST`/`PORT` (default `0.0.0.0:3000`) and keeps its SQLite d
    (`docker compose logs app`). You can set `SETUP_TOKEN` instead to choose it yourself.
 2. Open `/setup`, enter the token and create the first **admin** account.
 3. On **계정** (Account), enroll a second factor: a passkey and/or an authenticator app (TOTP). You'll get 10 single-use recovery codes. Store them somewhere safe.
-4. On **관리** (Admin), save your OpenDART API key. It's validated with one real call, stored encrypted, and the corp list download starts right away. Keep your own copy: the app never shows it again, and DART has no automatic key renewal. The same page shows the server's public IP to register with OpenDART, today's request usage and the jobs.
+4. On **관리** (Admin), save your OpenDART API key. It's validated with one real call, stored encrypted, and the corp list download starts right away. The app never shows it again; you can look it up on the OpenDART website. The same page shows the server's public IP to register with OpenDART, today's request usage and the jobs.
 5. Invite others from **관리 → 사용자 → 초대 링크 만들기**. Links are single-use and valid for 7 days.
 
 ## Configuration
@@ -124,7 +129,9 @@ The key is encrypted with AES-256-GCM. The encryption key is derived (HKDF-SHA25
 - **Without Docker:** the ID is read from `/etc/machine-id`, `IOPlatformUUID` or `MachineGuid`.
 - A key saved before a host ID was available is re-encrypted with the host binding automatically once one appears. The admin page shows how the stored key is protected.
 
-**Moving to a new server, reinstalling the OS (new machine-id) or changing `APP_SECRET` makes the stored key unreadable.** The admin page then says so, and you re-enter the key. This is why you need your own copy: **the DART website has no automatic "renew API key" option, so replacing a lost key means contacting OpenDART support.** If you migrate servers often, set `API_KEY_HOST_BINDING=off`.
+**Moving to a new server, reinstalling the OS (new machine-id) or changing `APP_SECRET` makes the stored key unreadable.** The admin page then says so, and you re-enter the key, which you can look up again by signing in to OpenDART. If you migrate servers often, set `API_KEY_HOST_BINDING=off`.
+
+Encryption at rest protects the key in backups and copied databases. It doesn't help against software on the same host or public IP: changing the key may require contacting OpenDART support (unverified, and it may not be possible), so OpenDART's IP allowlist is what actually limits who can use it. Keep the registered IP for this server alone, as described under [Requirements](#requirements).
 
 ### Outbound requests
 
