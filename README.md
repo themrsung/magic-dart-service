@@ -7,6 +7,84 @@ A self-hostable web app (installable PWA) and MCP server over a local cache of [
 - **MCP:** a Streamable HTTP endpoint at `/mcp` with OAuth 2.1 (dynamic client registration + PKCE), so Claude and other MCP clients can query the cache as the signed-in user.
 - **Accounts:** username + password (argon2id), optional second factors (passkeys, TOTP, recovery codes), invite-based registration, `admin` / `user` roles.
 
+## Guided setup (no web security experience needed)
+
+New to self-hosting? Copy the prompt below into an AI coding assistant that can run commands on your server, such as [Claude Code](https://claude.com/claude-code). It asks a few questions, explains anything that takes time to arrange, and then does the setup with you step by step. You can also read it as a checklist and follow it yourself.
+
+<details>
+<summary><strong>Setup prompt</strong> (click to expand, then copy everything in the box)</summary>
+
+````text
+You are helping me self-host magic-dart-service, a web app and MCP server that caches data from
+OpenDART (Korea's electronic disclosure system). I am not a web security expert: explain each step
+in plain words, run commands for me when you can, and stop to ask before anything that costs money,
+opens network ports, or changes system settings. Follow the repository's README.md for details and
+read it before you start; if this prompt and the README disagree, the README wins.
+
+Ask me these questions ONE AT A TIME, in this order, and wait for each answer:
+
+1. LANGUAGE. Ask which language I want to use for this setup (for example 한국어 or English).
+   Use that language for everything that follows, including your explanations.
+
+2. OPENDART API KEY. Ask whether I already have an OpenDART API key (인증키) from
+   https://opendart.fss.or.kr. If I don't, tell me to apply for one first and come back once it is
+   issued, because the application has to be approved and that takes time. Don't go on to the
+   installation until I have a key, unless I explicitly say I only want to try the app with the
+   built-in mock API (`npm run dev:mock`, see "Development" in the README).
+   Never ask me to paste the key into this chat: I will enter it myself on the app's admin page.
+
+3. STATIC IP. Ask whether my server has a static IPv4 address from a datacenter or cloud provider
+   (a VPS, for example). OpenDART only accepts requests from IP addresses I have registered, each
+   registration is reviewed before it takes effect, and changing an approved IP later also takes
+   time. The repository owner has only seen datacenter IPs approved; home (residential) IPs may be
+   rejected and often change. If I don't have one, recommend getting a small server with a static
+   IPv4 before continuing, rather than relying on a home connection.
+   Also explain the README warning: the IP allowlist is the real protection for the key, so this
+   server's IP must not be shared with untrusted services, and the server must not be used as a VPN
+   exit node, proxy or NAT gateway for other devices.
+
+4. USERS. Ask whether more than one person will use the app.
+   - Just me: set REGISTRATION=closed (only the first admin account will exist).
+   - More people: keep REGISTRATION=invite (the admin creates single-use invite links).
+     Explain that "open" lets anyone on the internet register, and only use it if I insist.
+
+5. OS AND DOCKER. Ask which operating system the server runs (Linux distribution, macOS or
+   Windows), and whether I want to use Docker (recommended) or run it directly with Node.js.
+   - On Linux with Docker, keep COMPOSE_FILE=docker-compose.yml:docker-compose.host-id.yml in .env,
+     which binds the encrypted API key to this machine.
+   - On Docker Desktop (macOS/Windows), remove that COMPOSE_FILE line, as the README explains.
+   - Ask whether I have a domain name. HTTPS is required (passkeys and secure cookies need it). If I
+     have no reverse proxy yet, use the built-in Caddy profile, which gets certificates automatically.
+
+6. COMPLETE THE SETUP. Then, checking each step works before moving on:
+   a. Install what's missing (git, Docker with Compose v2, or Node.js 22.18+). Ask before installing.
+   b. Clone the repository (ask me for its URL if we're not already inside a clone) and copy
+      .env.example to .env.
+   c. Fill in .env: ORIGIN (https://my-domain), DOMAIN, REGISTRATION from question 4, and a fresh
+      APP_SECRET generated with `openssl rand -base64 48`. Don't show me the secret in full and tell
+      me not to share or commit .env. Leave everything else at its default unless the README says
+      otherwise for my setup.
+   d. DNS: help me point my domain's A record at the server's static IPv4, and check it resolves.
+   e. Firewall: with the Caddy profile only ports 80 and 443 need to be open. Never expose port 3000
+      (the app) directly to the internet.
+   f. Start it: `docker compose --profile caddy up -d --build` (Caddy) or
+      `docker compose up -d --build` (my own reverse proxy), or the "Without Docker" steps.
+   g. First run: find the one-time setup token in the logs (`docker compose logs app`), open
+      https://my-domain/setup and create the admin account with a long password (10+ characters;
+      a sentence works well). Then, on the account page (계정), set up a passkey or an authenticator
+      app and store the recovery codes somewhere safe, offline.
+   h. On the admin page (관리), I enter my OpenDART API key myself. Show me the server's public IP
+      listed there and remind me to register exactly that IP with OpenDART and wait for approval.
+   i. If more than one user: show me how to create an invite link on the admin page.
+   j. Finally, explain how to connect an MCP client (README "Connecting MCP clients"), how to update
+      (git pull, then rebuild), and that I should back up the data volume and keep .env safe.
+
+At the end, give me a short summary of what was set up, where the configuration lives, and anything
+still waiting on me (for example OpenDART's IP approval).
+````
+
+</details>
+
 ## Requirements
 
 - An **OpenDART API key** (free: [opendart.fss.or.kr](https://opendart.fss.or.kr) → 인증키 신청). OpenDART only accepts calls from IP addresses registered with the key, so register your server's public IP (the admin page shows it).
@@ -14,6 +92,8 @@ A self-hostable web app (installable PWA) and MCP server over a local cache of [
   > - don't run untrusted or shared services (other people's apps, public proxies, seedboxes, …) on the same public IP;
   > - don't use the server as a VPN **exit node** (WireGuard, mesh VPNs), proxy or NAT gateway for other devices, since their traffic would leave from the allowlisted IP;
   > - when you move servers, remove the old IP from the allowlist.
+  >
+  > Adding an IP to the allowlist isn't instant: OpenDART reviews and approves each request before the IP is allowed. The repo owner has only tested approval with datacenter IPs; requests for residential IPs may be rejected.
   >
   > This app stores the key encrypted and never displays it again (see [OpenDART key storage](#opendart-key-storage)).
 - Docker with Compose v2, **or** Node.js ≥ 22.18.
@@ -141,9 +221,26 @@ Besides OpenDART, the server contacts `api.ipify.org` (falling back to `icanhazi
 
 ```sh
 npm install
-ORIGIN=http://localhost:5173 APP_SECRET=dev-secret-dev-secret-dev-secret-00 npm run dev
+npm run dev:mock        # http://localhost:5173 against a local mock OpenDART API
 npm run check && npm test
 ```
+
+`npm run dev:mock` starts the [mock OpenDART API](test/mock-opendart/README.md): three fictional companies, snapshot 2026-10-18, so treat its shapes as stale after that. It then starts `vite dev` with `OPENDART_BASE_URL` pointing at the mock, a separate database in `.dev-data/` and a mock API key already saved. Pass vite flags after `--`, e.g. `npm run dev:mock -- --open`.
+
+**Dev login bypass:** in this setup any username and password signs in as an admin, with no second factor. The bypass is on only when both hold:
+
+- the app runs under `vite dev` (SvelteKit's `dev` flag is compiled to `false` in production builds, so `node build` and the Docker image never have it);
+- `OPENDART_BASE_URL` points at a loopback host (`localhost`, `127.0.0.1`, `[::1]`).
+
+The login page shows a banner and the server log a warning while it's on.
+
+Against the real API instead:
+
+```sh
+ORIGIN=http://localhost:5173 APP_SECRET=dev-secret-dev-secret-dev-secret-00 npm run dev
+```
+
+`OPENDART_BASE_URL` (default `https://opendart.fss.or.kr/api`) overrides the API root, for testing only.
 
 ## License
 
