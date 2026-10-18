@@ -9,6 +9,8 @@
   },
   "scripts": {
     "dev": "vite dev",
+    "dev:mock": "node scripts/dev-mock.ts",
+    "mock:opendart": "node test/mock-opendart/cli.ts",
     "build": "vite build",
     "preview": "vite preview",
     "start": "node build",

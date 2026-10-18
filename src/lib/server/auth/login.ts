@@ -1,6 +1,7 @@
 import type { RequestEvent } from '@sveltejs/kit';
 import { sha256 } from './config';
 import { audit } from './audit';
+import { devAuthBypass, devUser } from './devbypass';
 import { meta } from './guard';
 import { burnPasswordCheck, MAX_PASSWORD, verifyPassword } from './password';
 import { hit, LIMITS, lockedFor, recordFailure, recordSuccess, retryText } from './ratelimit';
@@ -25,6 +26,12 @@ export async function passwordStep(event: Event, rawUsername: string, password: 
   const locked = lockedFor(username);
   if (locked) return { kind: 'error', message: `로그인 시도가 너무 많습니다. ${retryText(locked)}`, status: 429 };
   if (!username || !password || password.length > MAX_PASSWORD) return { kind: 'error', message: GENERIC_LOGIN_ERROR, status: 400 };
+
+  // Local development against the mock API only (see devbypass.ts): any credentials, no second factor.
+  if (devAuthBypass()) {
+    completeLogin(event, (await devUser(username)).id, 'dev-bypass');
+    return { kind: 'done' };
+  }
 
   const user = findUser(username);
   const ok = user ? await verifyPassword(user.password_hash, password) : (await burnPasswordCheck(password), false);

@@ -44,7 +44,8 @@
     'password+recovery': '비밀번호 + 복구 코드',
     passkey: '패스키',
     setup: '처음 설정',
-    register: '가입'
+    register: '가입',
+    'dev-bypass': '개발 모드 우회'
   };
 
   function device(ua: string | null): string {

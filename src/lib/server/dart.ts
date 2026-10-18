@@ -54,10 +54,16 @@ function countingFetch(source: Source): typeof fetch {
   };
 }
 
+/** OpenDART API root. Override only for testing (e.g. the mock in test/mock-opendart). */
+export function openDartBaseUrl(): string | undefined {
+  return process.env.OPENDART_BASE_URL?.replace(/\/+$/, '') || undefined;
+}
+
 function newClient(source: Source, maxRequests?: number, key = readApiKey()): OpenDartClient {
   if (!key) throw new NoApiKeyError();
   return new OpenDartClient({
     apiKey: key,
+    baseUrl: openDartBaseUrl(),
     requestsPerSecond: source === 'cron' ? 4 : 6,
     maxRequests,
     fetch: countingFetch(source)
@@ -124,6 +130,12 @@ export function describeError(err: unknown): ErrorInfo {
 
 /** Throws unless the key can make one real call from this host. */
 export async function validateKey(key: string): Promise<void> {
-  // 삼성전자: always present, cheap single-object response.
-  await probeClient(key).company('00126380');
+  try {
+    // 삼성전자: always present, cheap single-object response.
+    await probeClient(key).company('00126380');
+  } catch (err) {
+    // "No data" (013) still means the key and IP were accepted; only other errors are a failed check.
+    if (err instanceof OpenDartError && err.isNoData) return;
+    throw err;
+  }
 }

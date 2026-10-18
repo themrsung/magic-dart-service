@@ -29,6 +29,9 @@
 <svelte:head><title>로그인 · MagicDART</title></svelte:head>
 
 <AuthCard title="로그인">
+  {#if data.devBypass}
+    <p class="banner info" role="note"><strong>개발 모드</strong> · 모의 OpenDART API에 연결되어 있어 아무 아이디·비밀번호로 관리자 로그인됩니다.</p>
+  {/if}
   {#if form?.error}<p class="banner" role="alert">{form.error}</p>{/if}
   {#if passkeyError}<p class="banner" role="alert">{passkeyError}</p>{/if}
 

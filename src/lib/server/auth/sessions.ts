@@ -15,7 +15,7 @@ const TOUCH_EVERY = 5 * 60 * 1000;
 const PENDING_TTL = 5 * 60 * 1000;
 export const PENDING_MAX_ATTEMPTS = 5;
 
-export type LoginMethod = 'password' | 'password+totp' | 'password+passkey' | 'password+recovery' | 'passkey' | 'setup' | 'register';
+export type LoginMethod = 'password' | 'password+totp' | 'password+passkey' | 'password+recovery' | 'passkey' | 'setup' | 'register' | 'dev-bypass';
 
 export interface Meta {
   ip?: string | null;

@@ -1,5 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { registrationMode } from '$lib/server/auth/config';
+import { devAuthBypass } from '$lib/server/auth/devbypass';
 import { safeNext } from '$lib/server/auth/guard';
 import { passwordStep } from '$lib/server/auth/login';
 import { userCount } from '$lib/server/auth/users';
@@ -7,8 +8,9 @@ import { userCount } from '$lib/server/auth/users';
 export const load = ({ locals, url }) => {
   const next = safeNext(url.searchParams.get('next'));
   if (locals.user) redirect(303, next);
-  if (userCount() === 0) redirect(303, '/setup');
-  return { next, openRegistration: registrationMode() === 'open' };
+  const devBypass = devAuthBypass();
+  if (userCount() === 0 && !devBypass) redirect(303, '/setup');
+  return { next, openRegistration: registrationMode() === 'open', devBypass };
 };
 
 export const actions = {

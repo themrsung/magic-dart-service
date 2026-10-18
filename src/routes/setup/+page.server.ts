@@ -1,5 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { audit } from '$lib/server/auth/audit';
+import { devAuthBypass } from '$lib/server/auth/devbypass';
 import { meta } from '$lib/server/auth/guard';
 import { MIN_PASSWORD } from '$lib/server/auth/password';
 import { hit, LIMITS, retryText } from '$lib/server/auth/ratelimit';
@@ -7,7 +8,7 @@ import { rotateSession } from '$lib/server/auth/sessions';
 import { AuthError, checkSetupToken, createUser, setupDone, userCount } from '$lib/server/auth/users';
 
 export const load = () => {
-  if (userCount() > 0) redirect(303, '/login');
+  if (userCount() > 0 || devAuthBypass()) redirect(303, '/login');
   return { minPassword: MIN_PASSWORD };
 };
 

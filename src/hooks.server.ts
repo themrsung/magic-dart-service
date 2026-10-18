@@ -2,6 +2,7 @@ import { building } from '$app/environment';
 import { redirect, type Handle } from '@sveltejs/kit';
 import { purgeAudit } from '$lib/server/auth/audit';
 import { appOrigin, assertSecret } from '$lib/server/auth/config';
+import { DEV_MOCK_API_KEY, devAuthBypass } from '$lib/server/auth/devbypass';
 import { decide, MACHINE_ENDPOINTS } from '$lib/server/auth/guard';
 import { sweep } from '$lib/server/auth/ratelimit';
 import { purgeSessions, SESSION_COOKIE, validateSession } from '$lib/server/auth/sessions';
@@ -9,13 +10,19 @@ import { announceSetup, userCount } from '$lib/server/auth/users';
 import { startScheduler } from '$lib/server/jobs/runner';
 import { hostIdSource } from '$lib/server/hostid';
 import { purgeExpired } from '$lib/server/mcp/oauth';
-import { apiKeyStatus, hostBindingMode } from '$lib/server/settings';
+import { openDartBaseUrl } from '$lib/server/dart';
+import { apiKeyStatus, hostBindingMode, writeApiKey } from '$lib/server/settings';
 
 if (!building) {
   assertSecret();
   if (process.env.ORIGIN && !/^https:/.test(process.env.ORIGIN) && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(process.env.ORIGIN))
     console.warn('[auth] ORIGIN is not https: session cookies are Secure and browsers will drop them over plain http.');
-  announceSetup();
+  if (devAuthBypass()) {
+    console.warn(`[auth] DEV LOGIN BYPASS ON: any username/password signs in as admin (vite dev + OPENDART_BASE_URL=${openDartBaseUrl()}).`);
+    if (!apiKeyStatus().stored) writeApiKey(DEV_MOCK_API_KEY);
+  } else {
+    announceSetup();
+  }
   if (hostBindingMode() !== 'off') {
     const source = hostIdSource();
     if (source) console.log(`[key] OpenDART key is bound to this host (identifier from ${source}).`);
@@ -49,7 +56,7 @@ export const handle: Handle = async ({ event, resolve }) => {
   event.locals.user = session?.user ?? null;
   event.locals.sessionId = session?.id ?? null;
 
-  const decision = decide(url, event.locals.user, !event.locals.user && userCount() === 0);
+  const decision = decide(url, event.locals.user, !event.locals.user && userCount() === 0 && !devAuthBypass());
   if (decision.kind === 'unauthorized') {
     return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
   }
