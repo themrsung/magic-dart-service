@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM node:22-alpine AS build
+FROM node:22.23.4-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 # better-sqlite3 ships musl prebuilds, so its node-gyp install script is not needed (no toolchain in alpine).
@@ -7,7 +7,7 @@ RUN npm ci --ignore-scripts
 COPY . .
 RUN npm run build && npm prune --omit=dev --ignore-scripts
 
-FROM node:22-alpine
+FROM node:22.23.4-alpine
 ENV NODE_ENV=production \
     DATA_DIR=/data \
     HOST=0.0.0.0 \

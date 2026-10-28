@@ -13,9 +13,11 @@ import { LOCALE_COOKIE, pickLocale } from '$lib/i18n';
 import { runWithLocale } from '$lib/server/i18n';
 import { purgeExpired } from '$lib/server/mcp/oauth';
 import { openDartBaseUrl } from '$lib/server/dart';
+import { warnIfUnpatchedNode } from '$lib/server/runtime';
 import { apiKeyStatus, hostBindingMode, writeApiKey } from '$lib/server/settings';
 
 if (!building) {
+  warnIfUnpatchedNode();
   assertSecret();
   if (process.env.ORIGIN && !/^https:/.test(process.env.ORIGIN) && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(process.env.ORIGIN))
     console.warn('[auth] ORIGIN is not https: session cookies are Secure and browsers will drop them over plain http.');
