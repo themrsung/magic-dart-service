@@ -34,7 +34,7 @@ read it before you start; if this prompt and the README disagree, the README win
      the pull fails, show me and ask before doing anything else. Never discard my changes. If its
      remote points somewhere else (a fork or mirror), tell me and ask which one to use.
    - None of these: create a folder named `magic-dart`, go into it, and run `npm init -y` and then
-     `npm install magic-dart-service`. If Node.js (version 22.18 or later) and npm aren't installed,
+     `npm install magic-dart-service`. If Node.js (22.23.4+, 24.22.1+ or 26.12.1+) and npm aren't installed,
      explain how to install them for my OS and ask before installing.
    If a `.env` file already exists, this is an existing installation: never overwrite it. Read it,
    tell me which settings are already filled in (never print APP_SECRET), and only change what I ask.
@@ -97,7 +97,7 @@ Then ask me these questions ONE AT A TIME, in this order, and wait for each answ
      server for Node.js, or the built-in Caddy profile for Docker).
 
 6. COMPLETE THE SETUP. Then, checking each step works before moving on:
-   a. Install what's missing: Node.js 22.18 or later, and Caddy if I have no reverse proxy (for
+   a. Install what's missing: Node.js 22.23.4+, 24.22.1+ or 26.12.1+, and Caddy if I have no reverse proxy (for
       Docker instead: git and Docker with Compose v2). Ask before installing.
    b. Create .env in the installation folder from step 0 by copying
       node_modules/magic-dart-service/.env.example (or .env.example in a clone). Skip this if .env
@@ -155,7 +155,7 @@ still waiting on me (for example OpenDART's IP approval).
   Other providers haven't been tested. They may work, but OpenDART's approval of their IP ranges is unverified.
   >
   > This app stores the key encrypted and never displays it again (see [OpenDART key storage](#opendart-key-storage)).
-- Docker with Compose v2, **or** Node.js ≥ 22.18.
+- Docker with Compose v2, **or** Node.js 22.23.4+, 24.22.1+ or 26.12.1+ (older versions have known vulnerabilities; the server prints a security warning at startup if it runs on one).
 - A domain name and HTTPS for anything beyond local testing. Passkeys and `Secure` cookies need a secure origin (`https://…` or `http://localhost`).
 
 ## Quick start (Docker Compose)
@@ -195,7 +195,7 @@ location / {
 
 ### Install from npm
 
-With Node.js 22.18 or later, you don't need to clone the repository:
+With Node.js 22.23.4+, 24.22.1+ or 26.12.1+, you don't need to clone the repository:
 
 ```sh
 mkdir magic-dart && cd magic-dart
